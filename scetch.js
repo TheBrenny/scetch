@@ -26,7 +26,7 @@ function engine(filePath, options, callback) {
 }
 
 async function applyPartials(data) {
-    const rx = /\[\[i= *(.*?) *\]\]/g;
+    const rx = /\[\[i= *(.*?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)].filter((v, i, s) => s.indexOf(v) === i);
 
     for (let box of matchBoxes) {
@@ -38,7 +38,7 @@ async function applyPartials(data) {
 }
 
 async function applyVariables(data, options) {
-    const rx = /\[\[(?!\w=) *(.*?) *\]\]/g;
+    const rx = /\[\[(?!\w=) *(.*?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)].filter((v, i, s) => s.indexOf(v) === i);
 
     for (let box of matchBoxes) {

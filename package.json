@@ -4,7 +4,7 @@
   "description": "a templating engine thats different. probably.",
   "main": "scetch.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Tests aren't made yet... Maybe you could make them?\" && exit 1"
   },
   "repository": {
     "type": "git",
