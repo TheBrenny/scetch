@@ -11,47 +11,42 @@ if (!RegExp.escape) {
 function engine(filePath, options, callback) {
     fs.readFile(filePath)
         .then(data => data.toString())
-        .then(addPartials.bind(this))
+        .then(data => applyPartials.call(this, data))
+        .then(data => applyVariables.call(this, data, options))
         .then(data => {
             callback(null, data);
         }).catch(err => {
-            callback(err);
+            try {
+                callback(err);
+            } catch (catchErr) {
+                console.error("FATAL?");
+                console.error(catchErr);
+            }
         });
 }
 
-async function addPartials(data) {
-    // const rx = /\[\[i= *(.*?) *\]\]/g;
-    // [...data.matchAll(rx)].filter((v, i, s) => s.indexOf(v) === i).forEach(async (matchBox) => {
-    //     // match group is array: [whole match, group 1]
-    //     let partial = await fs.readFile(path.join(this.root, matchBox[1] + this.ext)).catch((err) => {
-    //         throw new Error(err);
-    //     });
-    //     data = data.replaceAll(matchBox[0], partial);
-    // });
-
-    // return data;
-
+async function applyPartials(data) {
     const rx = /\[\[i= *(.*?) *\]\]/g;
     let matchBoxes = [...data.matchAll(rx)].filter((v, i, s) => s.indexOf(v) === i);
+
     for (let box of matchBoxes) {
         let partial = await fs.readFile(path.join(this.root, box[1] + this.ext));
         data = data.replace(new RegExp(RegExp.escape(box[0])), partial);
     }
 
     return data;
+}
 
-    // return new Promise((resolve, reject) => {
+async function applyVariables(data, options) {
+    const rx = /\[\[(?!\w=) *(.*?) *\]\]/g;
+    let matchBoxes = [...data.matchAll(rx)].filter((v, i, s) => s.indexOf(v) === i);
 
-    //     (matchBox) => {
-    //         // match group is array: [whole match, group 1]
-    //         fs.readFile(path.join(this.root, matchBox[1] + this.ext))
-    //             .then(partial => {
-    //                 data = data.replace(new RegExp(RegExp.escape(matchBox[0])), partial);
-    //             })
-    //             .catch(reject).toString();
-    //     };
-    //     resolve(data);
-    // });
+    for (let box of matchBoxes) {
+        let variable = options[box[1]];
+        if (variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0])), variable);
+    }
+
+    return data;
 }
 
 module.exports.engine = engine;
