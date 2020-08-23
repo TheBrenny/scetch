@@ -1,0 +1,28 @@
+{
+  "name": "scetch",
+  "version": "1.0.0",
+  "description": "a templating engine thats different. probably.",
+  "main": "scetch.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thebrenny/scetch.git"
+  },
+  "keywords": [
+    "template",
+    "engine",
+    "template",
+    "express",
+    "bracket",
+    "handlebar",
+    "handlerbars"
+  ],
+  "author": "TheBrenny <iam@justbrenny.me>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/thebrenny/scetch/issues"
+  },
+  "homepage": "https://github.com/thebrenny/scetch#readme"
+}
