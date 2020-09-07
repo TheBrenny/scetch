@@ -1,6 +1,6 @@
 # scetch
 
-`scetch` is yet another templating library for express. It differs from the rest because it taught me how the express rendering/middleware engine works, and also really, really, really simple to use. I mean ***REALLY*** simple.
+`scetch` is yet another templating library for vanilla http(s) and express. It differs from the rest because it taught me how the express rendering/middleware engine works, and is also really, really, really simple to use. I mean ***REALLY DEAD*** simple.
 
 Why `scetch` and not `sketch`? Honestly, I don't know. I think I wanted it to be different? 
 
@@ -12,27 +12,12 @@ npm install --save scetch
 
 ## Usage
 
+- [Quick Start](#quick-start)
+- [`sce` How To](#sce-how-to)
+
 ### Quick Start
 
-In your `app.js`:
-```javascript
-const express = require('express');
-const scetch = require('scetch');
-
-let app = express();
-app.set('views', 'views'); // registers './views' as the folder holding all the scetch template files
-app.engine('sce', scetch.engine); // 'sce' registers the file extension, scetch.engine is the actual engine!
-app.set('view engine', 'sce'); // tells express to look for '*.sce' files when rendering
-
-app.get('/*', (req,res) => {
-    res.render('home', {
-        url: req.url,
-        time: new Date(Date.now()).toLocaleString()
-    });
-});
-```
-
-And here's the `views/home.sce`
+Consider this as your `__dirname/views/home.sce`
 ```handlebars
 <!DOCTYPE html>
 <html lang="en">
@@ -47,56 +32,110 @@ And here's the `views/home.sce`
 </html>
 ```
 
-### `sce` How To
+#### Vanila HTTP(S)
+
+In your `server.js`:
+```javascript
+const http = require('http');
+const router = require('./router');
+const scetch = require('scetch');
+
+router.get('/callback-*', (req, res) => {
+    scetch.engine('home',{
+        url: req.url,
+        time: new Date().toLocaleString()
+    }, (data) => {
+      res.write(data).end();
+    });
+});
+router.get('/promise-*', async function (req, res) => {
+  res.write(await scetch.engine('home'), {
+        url: req.url,
+        time: new Date().toLocaleString()
+    }).end;
+})
+```
+
+#### Express
+
+In your `app.js`:
+```javascript
+const express = require('express');
+const scetch = require('scetch');
+
+let app = express();
+app.set('views', 'views'); // registers './views' as the folder holding all the scetch template files
+app.engine('sce', scetch.engine); // 'sce' registers the file extension, scetch.engine is the actual engine!
+app.set('view engine', 'sce'); // tells express to look for '*.sce' files when rendering
+
+app.get('/*', (req,res) => {
+    res.render('home', {
+        url: req.url,
+        time: new Date().toLocaleString()
+    });
+});
+```
+
+## `sce` How To
 
 `scetch` offers a variety of handlebar-like expressions to make your templates easy to manage:
- - [Variables](#variables)
- - [Includes](#includes)
- - ~~[Conditionals](#conditionals)~~
- - ~~[Loops](#loops)~~
- - ~~[Components](#components)~~
+- [Variables](#variables)
+- [Includes](#includes)
+- ~~[Conditionals](#conditionals)~~
+- ~~[Loops](#loops)~~
+- ~~[Components](#components)~~
 
 These expressions are found using Regular Expressions, therefore, `scetch` is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
 
-#### Variables
+### Variables
 
 - Usage: `[[ variableName ]]` ~~or `[[ object.value ]]`~~ TODO
 - Regex: `/\[\[(?!\w=) *(.*?) *\]\]/gi`
 
 Variables are inserted within the `scetch` engine by swapping the placeholder with the variable passed from the express route. ~~What you'll notice is that you can also use dot notation for objects! This allows for extra complexity which you might not get from another templating engine!~~
 
-#### Includes
+### Includes
 
 - Usage: `[[i= location/to/partial ]]`
 - Regex: `/\[\[i= *(.*?) *\]\]/gi`
 
 Includes are partials. You can specify a portion of your HTML (the whole head tag for example), and then add in `[[i=partial/head]]` into your template, and your whole head tag will be inserted!
 
-#### ~~Conditionals~~ TODO!
+### ~~Conditionals~~ TODO!
 
 - Usage:
   - If: `[[?= "js eval expression" != null ]]`
   - Else If: `[[3= "another expression" == null ]]`
   - Else: `[[!= else ]]`
   - End If: `[[?==]]`
-- Regexes: `yet to be built`
+- Regexes: *`yet to be built`*
 
 Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to!
 
-#### ~~Loops~~ TODO!
+### ~~Loops~~ TODO!
 
 - Usage:
   - For: `[[f= counter 0:10 ]]` or `[[f= number 0:2:10 ]]` (step 2 each time)
   - For Each: `[[e= newVar in array ]]`
   - While: `[[w= jsBoolEvalExpression() ]]`
   - End Loop: `[[?==]]` (I know, it's the end if! 😮)
-- Regexes: `yet to be built`
+- Regexes: *`yet to be built`*
 
 Loops allow you to duplicate certain pieces of your template so you can create multiples! The counter loop is inclusive of both ends, so looping from 0 to 10 will provide 0 and 10 as values. What you might also notice, is that the end loop is identical to the end if - this is intentional, because the last open if/for/while will be closed using the end loop/if!
 
-#### ~~Components~~ TODO! Maybe?
+### ~~Components~~ TODO! Maybe?
 
-I don't actually know why I want this...
+- Usage:
+  - Prepare component: `[[l= location/to/component ]]` - Places a `script` object where this tag is.
+  - Inject component on server:
+    - Non-, and don't, prepare: `[[c= location/to/component || argName="value" escaped="\"escape values\""`
+    - Prepared component: `[[c= componentName || argName="value" escaped="\"escape values\"" ]]`
+  - Inject component on client-side: `js: scetch.insert(target, [position], htmlComponent)`
+- Regexes: *`yet to be built`*
+
+Components in scetch allow you to render partials both statically and dynamically! You can render the partial before sending data to the client by using `c=`, allowing you to, for example, add multiple rows of todos! Then if the client wants a new todo, the global scetch object can insert one on your command! By calling `scetch.insert($(".todos"), "beforeend", scetch.comps.todo)`, you can add a new todo component before the closing tag of the todo list!
+
+*See also! `scetch.insert` is more-or-less a wrapper for [`insertAdjacentHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML). Go there to understand the arguments!*
 
 ## Contributing
 Pull requests are warmly welcomed. For major changes, please open an issue first to discuss what you would like to change.
