@@ -27,7 +27,6 @@ function engine(filePath, variables, callback) {
         .then(data => applyVariables.call(this, data, variables))
         .then(data => {
             if (!callback) return data;
-
             callback(null, data);
         }).catch(err => {
             if (!callback) return err;
@@ -83,10 +82,10 @@ async function applyVariables(data, variables) {
 
         let variable = variables;
         for (let d of dotNot) {
-            if(typeof variable === "undefined") break;
+            if (typeof variable === "undefined") break;
             variable = variable[d];
         }
-        if(typeof variable === "undefined") continue;
+        if (typeof variable === "undefined") continue;
 
         if (variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
     }
@@ -171,22 +170,29 @@ async function applyLogic(data, variables) {
 
     data = data.split("\n");
 
-    let schema = (type, line, meta) => {
+    let schema = (type, line, meta, vars) => {
         return {
             "type": type, // if, for, each, while
             "line": line || 0, // the line of the start (not reqd always)
-            "meta": meta || {} // any additional info for this type (not reqd always)
+            "meta": meta || {}, // any additional info for this type (not reqd always)
+            "vars": vars || {}
         };
     };
 
     let depth = [];
     depth.last = () => depth[depth.length - 1];
+    depth.getVars = () => {
+        let o = {};
+        for (let d of depth) {
+            o = Object.assign(o, d.vars);
+        }
+        return o;
+    };
 
     let ret = [];
     let safeEval;
 
     let output = true;
-    let loopVars = {};
 
     for (let lineNo = 0; lineNo < data.length; lineNo++) {
         let line = data[lineNo];
@@ -201,10 +207,18 @@ async function applyLogic(data, variables) {
                     depth.last().meta.val += depth.last().meta.skip;
                     if (depth.last().meta.val >= depth.last().meta.stop) {
                         //break loop
-                        loopVars = {};
                         depth.pop();
                     } else {
-                        loopVars[depth.last().meta.varName] = depth.last().meta.val;
+                        depth.last().vars[depth.last().meta.varName] = depth.last().meta.val;
+                        lineNo = depth.last().line;
+                    }
+                    break;
+                case "each":
+                    depth.last().meta.idx++;
+                    if(depth.last().meta.idx >= depth.last().meta.length) {
+                        depth.pop();
+                    } else {
+                        depth.last().vars[depth.last().meta.varName] = depth.last().meta.collection[depth.last().meta.idx];
                         lineNo = depth.last().line;
                     }
                     break;
@@ -247,16 +261,37 @@ async function applyLogic(data, variables) {
                 skip: parseInt(matchBoxes[0][3] || 1),
                 stop: parseInt(matchBoxes[0][4])
             };
-            depth.push(schema("for", lineNo, d));
-            loopVars[d.varName] = parseInt(d.start);
+            if (d.start === d.stop) continue; // 0 loop
+            if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way!
+            let v = {
+                [d.varName]: d.val
+            };
+            depth.push(schema("for", lineNo, d, v));
             continue;
         }
 
+        // For each OBJECT
         matchBoxes = [...line.matchAll(eachLoop)];
+        if (!!matchBoxes && matchBoxes.length) {
+            let d = {
+                varName: matchBoxes[0][1],
+                idx: 0,
+                collection: variables[matchBoxes[0][2]],
+            };
+            if (d.collection && d.collection.length && d.collection.length > 0) {
+                d.length = d.collection.length;
+                let v = {
+                    [d.varName]: d.collection[d.idx]
+                };
+                depth.push(schema("each", lineNo, d, v));
+            }
+            continue;
+        }
+
         matchBoxes = [...line.matchAll(whileLoop)];
 
         if (output) {
-            ret.push(await processData(line, Object.assign({}, variables, loopVars), true));
+            ret.push(await processData(line, Object.assign({}, variables, depth.getVars()), true));
         }
     }
 

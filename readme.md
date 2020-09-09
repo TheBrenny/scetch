@@ -84,7 +84,7 @@ scetch offers a variety of handlebar-like expressions to make your templates eas
 - [Variables](#variables)
 - [Partials](#partials)
 - [Conditionals](#conditionals)
-- [Loops](#loops) - Still have For Each and While to go!
+- [Loops](#loops) - Still have While to go!
 - [Components](#components)
 
 These expressions are found using Regular Expressions, therefore, scetch is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
@@ -126,7 +126,7 @@ Conditionals provide you with a way to control the flow of your rendered views. 
 
 Loops allow you to duplicate certain pieces of your template so you can create multiples! The counter loop is inclusive of start, and exclusive of end, so looping from 0 to 10 will provide 0 through 9 (or 10 values).
 
-Also, if you want to use the number counter to reference an array element from a variable passed in, you can use dot notation and variable substitution, like `[[ array.[[counter]] ]]`. scetch handles this by 
+Also, if you want to use the number counter to reference an array element from a variable passed in, you can use dot notation and variable substitution, like `[[ array.[[counter]] ]]`. scetch handles this by substituting the value for the counter in during the loop, and then substituting the whole variable just before finishing up! (Take note that this is only required because of variable name dependency.)
 
 What you might also notice, is that the end loop tag is identical to the end if - this is intentional, because the last open if/for/while will be closed using the end loop/if!
 
