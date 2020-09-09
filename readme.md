@@ -80,21 +80,21 @@ app.get('/*', (req,res) => {
 
 ## `sce` How To
 
-`scetch` offers a variety of handlebar-like expressions to make your templates easy to manage:
+scetch offers a variety of handlebar-like expressions to make your templates easy to manage:
 - [Variables](#variables)
 - [Partials](#partials)
-- ~~[Conditionals](#conditionals)~~
+- [Conditionals](#conditionals)
 - ~~[Loops](#loops)~~
 - [Components](#components)
 
-These expressions are found using Regular Expressions, therefore, `scetch` is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
+These expressions are found using Regular Expressions, therefore, scetch is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
 
 ### Variables
 
 - Usage: `[[ variableName ]]` ~~or `[[ object.value ]]`~~ TODO
 - Regex: `/\[\[(?!.*=) *(.+?) *\]\]/gi`
 
-Variables are inserted within the `scetch` engine by swapping the placeholder with the variable passed from the express route. ~~What you'll notice is that you can also use dot notation for objects! This allows for extra complexity which you might not get from another templating engine!~~
+Variables are inserted within the scetch engine by swapping the placeholder with the variable passed from the express route. ~~What you'll notice is that you can also use dot notation for objects! This allows for extra complexity which you might not get from another templating engine!~~
 
 ### Partials
 
@@ -103,12 +103,13 @@ Variables are inserted within the `scetch` engine by swapping the placeholder wi
 
 Partials are synonymous with includes (yeah, just like PHP includes... almost...). You can specify a portion of your HTML (the whole head tag for example), and then add in `[[i=partial/head]]` into your template, and your whole head tag will be inserted!
 
-### ~~Conditionals~~ TODO!
+### Conditionals
 
 - Usage:
   - If: `[[?= "js eval expression" != null ]]`
   - Else If: `[[3= "another expression" == null ]]`
-  - Else: `[[!= else ]]`
+  - Else: `[[3= ]]` (else if with no expression)
+  - ~~Else: `[[!= else ]]`~~
   - End If: `[[?==]]`
 - Regexes: *`yet to be built`*
 

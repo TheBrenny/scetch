@@ -1,3 +1,4 @@
+const vm = require('vm');
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -16,7 +17,7 @@ if (!RegExp.escape) {
     };
 }
 
-function engine(filePath, options, callback) {
+function engine(filePath, variables, callback) {
     if (!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root || this.root || scetchDefaults.root, filePath);
     if (!filePath.endsWith('.sce')) filePath += '.sce';
 
@@ -25,7 +26,8 @@ function engine(filePath, options, callback) {
         .then(data => applyPartials.call(this, data))
         .then(data => applyComponentLoadScripts.call(this, data))
         .then(data => applyComponentInjections.call(this, data))
-        .then(data => applyVariables.call(this, data, options))
+        .then(data => applyLogic.call(this, data, variables))
+        .then(data => applyVariables.call(this, data, variables))
         .then(data => {
             if (!callback) return data;
 
@@ -63,16 +65,16 @@ async function applyPartials(data) {
     return data;
 }
 
-async function applyVariables(data, options) {
-    if (typeof options === "undefined") return data;
+async function applyVariables(data, variables) {
+    if (typeof variables === "undefined" || Object.getOwnPropertyNames(variables).length === 0) return data;
     const rx = /\[\[(?!.*=) *(.*?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
     if (!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
     for (let box of matchBoxes) {
-        if (typeof options[box[1]] === 'undefined') continue;
-        let variable = options[box[1]];
+        if (typeof variables[box[1]] === 'undefined') continue;
+        let variable = variables[box[1]];
         if (variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
     }
 
@@ -123,7 +125,7 @@ async function applyComponentInjections(data) {
     let root = scetchOptions.root || this.root || scetchDefaults.root;
     let ext = scetchOptions.ext || this.ext || scetchDefaults.ext;
     for (let box of matchBoxes) {
-        let matches = box[2].match(rxV);
+        let matches = (box[2] || "").match(rxV) || [];
         let options = {};
 
         for (let opt of matches) {
@@ -132,13 +134,102 @@ async function applyComponentInjections(data) {
 
         try {
             let component = (await fs.readFile(path.join(root, box[1] + ext))).toString();
-            component = await applyVariables(component, options);
+            //component = await applyVariables(component, options);
             data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), component);
         } catch (e) {
             continue;
         }
     }
 
+    return data;
+}
+
+async function applyLogic(data, variables) {
+    // The name is quite suiting... 🤣🙃
+    const endConditional = /\[\[\?==\]\]/gi;
+    const ifOpen = /\[\[\?= *([^\s=].*?) *\]\]/gi;
+    const elseIf = /\[\[3= *(.*?) *\]\]/gi;
+    const numberLoop = /\[\[f= *(\w+?) *(\d+):(?:(\d+):)?(\d+) *\]\]/gi;
+    const eachLoop = /\[\[e= *(\w+) *in *(\w+) *\]\]/gi;
+    const whileLoop = /\[\[w= *(\S.*?) *\]\]/gi;
+
+    data = data.split("\n");
+
+    let schema = (type, line, meta) => {
+        return {
+            "type": type, // if, for, each, while
+            "line": line || 0, // the line of the start (not reqd always)
+            "meta": meta || {} // any additional info for this type (not reqd always)
+        };
+    };
+
+    let depth = [];
+    depth.last = () => depth[depth.length - 1];
+
+    let ret = [];
+    let safeEval;
+
+    let output = true;
+    let loopVars = {};
+
+    for (let lineNo = 0; lineNo < data.length; lineNo++) {
+        let line = data[lineNo];
+
+        if (depth.length > 0 && endConditional.test(line)) {
+            switch (depth.last().type) {
+                case "if":
+                    output = true;
+                    break;
+            }
+            depth.pop();
+            continue;
+        }
+
+        // Opening If
+        let matchBoxes = [...line.matchAll(ifOpen)];
+        if (!!matchBoxes && matchBoxes.length) {
+            depth.push(schema("if", line, {
+                ran: false
+            }));
+            safeEval = vm.runInNewContext(matchBoxes[0][1], variables); // lol not so safe...
+            depth.last().ran = output = safeEval;
+            continue;
+        }
+
+        // Else If, Else
+        matchBoxes = [...line.matchAll(elseIf)];
+        if (!!matchBoxes && matchBoxes.length && depth.last().type === "if") {
+            if (output || depth.last().ran) output = false;
+            else {
+                // else if or just else
+                if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], variables);
+                else safeEval = true;
+
+                depth.last().ran = output = safeEval;
+            }
+            continue;
+        }
+
+        matchBoxes = [...line.matchAll(numberLoop)];
+        // if (!!matchBoxes && matchBoxes.length) {
+        //     let d = {
+        //         variable: matchBoxes[0][1],
+        //         start: parseInt(matchBoxes[0][2]),
+        //         skip: parseInt(matchBoxes[0][3] || 1),
+        //         stop: parseInt(matchBoxes[0][4])
+        //     };
+        //     depth.push(schema("for", line, d));
+        //     loopVars[d.variable] = parseInt(d.start);
+
+        //     continue;
+        // }
+        matchBoxes = [...line.matchAll(eachLoop)];
+        matchBoxes = [...line.matchAll(whileLoop)];
+
+        if (output) ret.push(line);
+    }
+
+    data = ret.join("\n");
     return data;
 }
 
