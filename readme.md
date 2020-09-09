@@ -84,7 +84,7 @@ scetch offers a variety of handlebar-like expressions to make your templates eas
 - [Variables](#variables)
 - [Partials](#partials)
 - [Conditionals](#conditionals)
-- [Loops](#loops) - Still have While to go!
+- [Loops](#loops)
 - [Components](#components)
 
 These expressions are found using Regular Expressions, therefore, scetch is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
@@ -115,7 +115,7 @@ Partials are synonymous with includes (yeah, just like PHP includes... almost...
 
 Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to!
 
-### Loops TODO!
+### Loops
 
 - Usage:
   - For: `[[f= counter 0:10 ]]` or `[[f= number 0:2:10 ]]` (step 2 each time)

@@ -215,12 +215,16 @@ async function applyLogic(data, variables) {
                     break;
                 case "each":
                     depth.last().meta.idx++;
-                    if(depth.last().meta.idx >= depth.last().meta.length) {
+                    if (depth.last().meta.idx >= depth.last().meta.length) {
                         depth.pop();
                     } else {
                         depth.last().vars[depth.last().meta.varName] = depth.last().meta.collection[depth.last().meta.idx];
                         lineNo = depth.last().line;
                     }
+                    break;
+                case "while":
+                    let safeEval = depth.last().meta.condition.runInContext(depth.last().meta.context);
+                    if(safeEval)
                     break;
             }
             continue;
@@ -233,20 +237,20 @@ async function applyLogic(data, variables) {
                 ran: false
             }));
             safeEval = vm.runInNewContext(matchBoxes[0][1], variables); // lol not so safe...
-            depth.last().ran = output = safeEval;
+            depth.last().meta.ran = output = safeEval;
             continue;
         }
 
         // Else If, Else
         matchBoxes = [...line.matchAll(elseIf)];
         if (!!matchBoxes && matchBoxes.length && depth.last().type === "if") {
-            if (output || depth.last().ran) output = false;
+            if (output || depth.last().meta.ran) output = false;
             else {
                 // else if or just else
                 if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], variables);
                 else safeEval = true;
 
-                depth.last().ran = output = safeEval;
+                depth.last().meta.ran = output = safeEval;
             }
             continue;
         }
@@ -288,7 +292,18 @@ async function applyLogic(data, variables) {
             continue;
         }
 
+        // While Loop
         matchBoxes = [...line.matchAll(whileLoop)];
+        if (!!matchBoxes && matchBoxes.length) {
+            depth.push(schema("while", lineNo, {
+                condition: new vm.Script(matchBoxes[0][1]),
+                context: vm.createContext(Object.assign({}, variables)),
+                looping: false
+            }));
+            let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
+            depth.last().meta.looping = output = safeEval;
+        }
+
 
         if (output) {
             ret.push(await processData(line, Object.assign({}, variables, depth.getVars()), true));
