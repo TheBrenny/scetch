@@ -24,7 +24,7 @@ function engine(filePath, variables, callback) {
     let p = fs.readFile(filePath)
         .then(data => data.toString())
         .then(data => processData.call(this, data, variables))
-        // .then(data => applyLogic.call(this, data, variables))
+        .then(data => applyVariables.call(this, data, variables))
         .then(data => {
             if (!callback) return data;
 
@@ -79,8 +79,15 @@ async function applyVariables(data, variables) {
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
     for (let box of matchBoxes) {
-        if (typeof variables[box[1]] === 'undefined') continue;
-        let variable = variables[box[1]];
+        let dotNot = box[1].split('.');
+
+        let variable = variables;
+        for (let d of dotNot) {
+            if(typeof variable === "undefined") break;
+            variable = variable[d];
+        }
+        if(typeof variable === "undefined") continue;
+
         if (variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
     }
 

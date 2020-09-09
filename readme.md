@@ -84,7 +84,7 @@ scetch offers a variety of handlebar-like expressions to make your templates eas
 - [Variables](#variables)
 - [Partials](#partials)
 - [Conditionals](#conditionals)
-- ~~[Loops](#loops)~~
+- [Loops](#loops) - Still have For Each and While to go!
 - [Components](#components)
 
 These expressions are found using Regular Expressions, therefore, scetch is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
@@ -94,7 +94,7 @@ These expressions are found using Regular Expressions, therefore, scetch is pret
 - Usage: `[[ variableName ]]` ~~or `[[ object.value ]]`~~ TODO
 - Regex: `/\[\[(?!.*=) *(.+?) *\]\]/gi`
 
-Variables are inserted within the scetch engine by swapping the placeholder with the variable passed from the express route. ~~What you'll notice is that you can also use dot notation for objects! This allows for extra complexity which you might not get from another templating engine!~~
+Variables are inserted within the scetch engine by swapping the placeholder with the variable passed from the express route. What you'll notice is that you can also use dot notation for objects! Depth for dot notation is relatively shallow, and it's probably best that you stray from it when using loops - this is what caused my hair to fall out last night! Otherwise, I guess it works well -- I haven't really tested it too hard... ~~This allows for extra complexity which you might not get from another templating engine!~~
 
 ### Partials
 
@@ -115,7 +115,7 @@ Partials are synonymous with includes (yeah, just like PHP includes... almost...
 
 Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to!
 
-### ~~Loops~~ TODO!
+### Loops TODO!
 
 - Usage:
   - For: `[[f= counter 0:10 ]]` or `[[f= number 0:2:10 ]]` (step 2 each time)
@@ -126,7 +126,7 @@ Conditionals provide you with a way to control the flow of your rendered views. 
 
 Loops allow you to duplicate certain pieces of your template so you can create multiples! The counter loop is inclusive of start, and exclusive of end, so looping from 0 to 10 will provide 0 through 9 (or 10 values).
 
-Also, if you want to use the number counter to reference an array element from a variable passed in, you can use dot notation, like `[[ array.counter ]]`. scetch handles this by 
+Also, if you want to use the number counter to reference an array element from a variable passed in, you can use dot notation and variable substitution, like `[[ array.[[counter]] ]]`. scetch handles this by 
 
 What you might also notice, is that the end loop tag is identical to the end if - this is intentional, because the last open if/for/while will be closed using the end loop/if!
 
