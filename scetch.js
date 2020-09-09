@@ -23,11 +23,8 @@ function engine(filePath, variables, callback) {
 
     let p = fs.readFile(filePath)
         .then(data => data.toString())
-        .then(data => applyPartials.call(this, data))
-        .then(data => applyComponentLoadScripts.call(this, data))
-        .then(data => applyComponentInjections.call(this, data))
-        .then(data => applyLogic.call(this, data, variables))
-        .then(data => applyVariables.call(this, data, variables))
+        .then(data => processData.call(this, data, variables))
+        // .then(data => applyLogic.call(this, data, variables))
         .then(data => {
             if (!callback) return data;
 
@@ -43,6 +40,15 @@ function engine(filePath, variables, callback) {
             }
         });
     if (!callback) return p;
+}
+
+async function processData(data, variables, noLogic) {
+    return Promise.resolve(data)
+        .then(data => applyPartials.call(this, data))
+        .then(data => applyComponentLoadScripts.call(this, data))
+        .then(data => applyComponentInjections.call(this, data, variables))
+        .then(data => applyVariables.call(this, data, variables))
+        .then(data => noLogic ? data : applyLogic.call(this, data, variables));
 }
 
 async function applyPartials(data) {
@@ -67,7 +73,7 @@ async function applyPartials(data) {
 
 async function applyVariables(data, variables) {
     if (typeof variables === "undefined" || Object.getOwnPropertyNames(variables).length === 0) return data;
-    const rx = /\[\[(?!.*=) *(.*?) *\]\]/gi;
+    const rx = /\[\[(?!.*=) *([^\[\]\s]+?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
     if (!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
@@ -114,7 +120,7 @@ async function applyComponentLoadScripts(data) {
     return data;
 }
 
-async function applyComponentInjections(data) {
+async function applyComponentInjections(data, variables) {
     const rx = /\[\[c= *([^ ]+?)(?: *\|\| *(.+?))? *\]\]/gi;
     const rxV = /(\w+)=("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+)/gi;
     let matchBoxes = [...data.matchAll(rx)];
@@ -126,15 +132,18 @@ async function applyComponentInjections(data) {
     let ext = scetchOptions.ext || this.ext || scetchDefaults.ext;
     for (let box of matchBoxes) {
         let matches = (box[2] || "").match(rxV) || [];
+        matches = matches.map((el) => el.split("="));
         let options = {};
 
         for (let opt of matches) {
-            options[opt[1]] = opt[2];
+            if (opt[1].startsWith("\"")) opt[1] = opt[1].substring(1, opt[1].length - 1).replace(/\\"/gi, "\"");
+            else opt[1] = variables[opt[1]] || `[[ ${opt[1]} ]]`;
+            options[opt[0]] = opt[1];
         }
 
         try {
             let component = (await fs.readFile(path.join(root, box[1] + ext))).toString();
-            //component = await applyVariables(component, options);
+            component = await processData(component, options);
             data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), component);
         } catch (e) {
             continue;
@@ -179,16 +188,27 @@ async function applyLogic(data, variables) {
             switch (depth.last().type) {
                 case "if":
                     output = true;
+                    depth.pop();
+                    break;
+                case "for":
+                    depth.last().meta.val += depth.last().meta.skip;
+                    if (depth.last().meta.val >= depth.last().meta.stop) {
+                        //break loop
+                        loopVars = {};
+                        depth.pop();
+                    } else {
+                        loopVars[depth.last().meta.varName] = depth.last().meta.val;
+                        lineNo = depth.last().line;
+                    }
                     break;
             }
-            depth.pop();
             continue;
         }
 
         // Opening If
         let matchBoxes = [...line.matchAll(ifOpen)];
         if (!!matchBoxes && matchBoxes.length) {
-            depth.push(schema("if", line, {
+            depth.push(schema("if", lineNo, {
                 ran: false
             }));
             safeEval = vm.runInNewContext(matchBoxes[0][1], variables); // lol not so safe...
@@ -210,23 +230,27 @@ async function applyLogic(data, variables) {
             continue;
         }
 
+        // For each number
         matchBoxes = [...line.matchAll(numberLoop)];
-        // if (!!matchBoxes && matchBoxes.length) {
-        //     let d = {
-        //         variable: matchBoxes[0][1],
-        //         start: parseInt(matchBoxes[0][2]),
-        //         skip: parseInt(matchBoxes[0][3] || 1),
-        //         stop: parseInt(matchBoxes[0][4])
-        //     };
-        //     depth.push(schema("for", line, d));
-        //     loopVars[d.variable] = parseInt(d.start);
+        if (!!matchBoxes && matchBoxes.length) {
+            let d = {
+                varName: matchBoxes[0][1],
+                start: parseInt(matchBoxes[0][2]),
+                val: parseInt(matchBoxes[0][2]),
+                skip: parseInt(matchBoxes[0][3] || 1),
+                stop: parseInt(matchBoxes[0][4])
+            };
+            depth.push(schema("for", lineNo, d));
+            loopVars[d.varName] = parseInt(d.start);
+            continue;
+        }
 
-        //     continue;
-        // }
         matchBoxes = [...line.matchAll(eachLoop)];
         matchBoxes = [...line.matchAll(whileLoop)];
 
-        if (output) ret.push(line);
+        if (output) {
+            ret.push(await processData(line, Object.assign({}, variables, loopVars), true));
+        }
     }
 
     data = ret.join("\n");
