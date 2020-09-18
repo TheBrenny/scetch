@@ -224,7 +224,11 @@ async function applyLogic(data, variables) {
                     break;
                 case "while":
                     let safeEval = depth.last().meta.condition.runInContext(depth.last().meta.context);
-                    if(safeEval)
+                    if (safeEval) {
+                        lineNo = depth.last().line;
+                    } else {
+                        depth.pop();
+                    }
                     break;
             }
             continue;
@@ -282,7 +286,7 @@ async function applyLogic(data, variables) {
                 idx: 0,
                 collection: variables[matchBoxes[0][2]],
             };
-            if (d.collection && d.collection.length && d.collection.length > 0) {
+            if (d.collection) {
                 d.length = d.collection.length;
                 let v = {
                     [d.varName]: d.collection[d.idx]
