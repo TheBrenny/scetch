@@ -72,7 +72,7 @@ async function applyPartials(data) {
 
 async function applyVariables(data, variables) {
     if (typeof variables === "undefined" || Object.getOwnPropertyNames(variables).length === 0) return data;
-    const rx = /\[\[(?!.*=) *([^\[\]\s]+?) *\]\]/gi;
+    const rx = /\[\[[^=]*? *([^\[\]\s]+?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
     if (!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);

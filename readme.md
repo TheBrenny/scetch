@@ -92,7 +92,7 @@ These expressions are found using Regular Expressions, therefore, scetch is pret
 ### Variables
 
 - Usage: `[[ variableName ]]` ~~or `[[ object.value ]]`~~ TODO
-- Regex: `/\[\[(?!.*=) *(.+?) *\]\]/gi`
+- Regex: `/\[\[[^=]*? *([^\[\]\s]+?) *\]\]/gi`
 
 Variables are inserted within the scetch engine by swapping the placeholder with the variable passed from the express route. What you'll notice is that you can also use dot notation for objects! Depth for dot notation is relatively shallow, and it's probably best that you stray from it when using loops - this is what caused my hair to fall out last night! Otherwise, I guess it works well -- I haven't really tested it too hard... ~~This allows for extra complexity which you might not get from another templating engine!~~
 
