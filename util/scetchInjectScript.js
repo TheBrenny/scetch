@@ -37,10 +37,9 @@ module.exports = (function () {
             }
         }
 
-        let m = "insertAdjacent";
-        if (component.constructor.name.indexOf("Element") !== -1) m += "Element";
-        else m += "HTML";
+        if (component.constructor.name.indexOf("Element") == -1) component = new DOMParser().parseFromString(component, "text/html").querySelector("body>*");
 
-        target[m](position, component);
+        target.insertAdjacentElement(position, component);
+        return component;
     };
 }).toString();
