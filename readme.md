@@ -40,7 +40,7 @@ In your `server.js`:
 ```javascript
 const http = require('http');
 const router = require('./router');
-const scetch = require('scetch');
+const scetch = require('scetch')();
 
 router.get('/callback-*', (req, res) => {
     scetch.engine('home',{
@@ -63,7 +63,7 @@ router.get('/promise-*', async function (req, res) => {
 In your `app.js`:
 ```javascript
 const express = require('express');
-const scetch = require('scetch');
+const scetch = require('scetch')();
 
 let app = express();
 app.set('views', 'views'); // registers './views' as the folder holding all the scetch template files
