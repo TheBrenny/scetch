@@ -16,6 +16,17 @@ if (!RegExp.escape) {
         return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
     };
 }
+// Matchall polyfill - this is how we handle Node <12
+if (!String.prototype.matchAll) {
+    String.prototype.matchAll = function (rx) {
+        if (typeof rx === "string") rx = new RegExp(rx, "g");
+        rx = new RegExp(rx);
+        let cap = [];
+        let all = [];
+        while ((cap = rx.exec(this)) !== null) all.push(cap);
+        return all;
+    };
+}
 
 function engine(filePath, variables, callback) {
     if (!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root || this.root || scetchDefaults.root, filePath);
