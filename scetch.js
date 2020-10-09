@@ -58,10 +58,10 @@ async function processData(data, variables, noLogic) {
 
     return Promise.resolve(data)
         .then(data => applyPartials(data, variables))
-            .then(data => applyComponentLoadScripts(data))
-            .then(data => applyComponentInjections(data, variables))
-            .then(data => applyVariables(data, variables))
-            .then(data => noLogic ? data : applyLogic(data, variables));
+        .then(data => applyComponentLoadScripts(data))
+        .then(data => applyComponentInjections(data, variables))
+        .then(data => applyVariables(data, variables))
+        .then(data => noLogic ? data : applyLogic(data, variables));
 }
 
 async function applyPartials(data, variables) {
@@ -204,6 +204,7 @@ async function applyLogic(data, variables) {
         }
         return o;
     };
+    let allVars = () => Object.assign({}, variables, depth.getVars());
 
     let ret = [];
     let safeEval;
@@ -256,7 +257,7 @@ async function applyLogic(data, variables) {
             depth.push(schema("if", lineNo, {
                 ran: false
             }));
-            safeEval = vm.runInNewContext(matchBoxes[0][1], variables); // lol not so safe...
+            safeEval = vm.runInNewContext(matchBoxes[0][1], allVars()); // lol not so safe...
             depth.last().meta.ran = output = safeEval;
             continue;
         }
@@ -267,7 +268,7 @@ async function applyLogic(data, variables) {
             if (output || depth.last().meta.ran) output = false;
             else {
                 // else if or just else
-                if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], variables);
+                if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], allVars());
                 else safeEval = true;
 
                 depth.last().meta.ran = output = safeEval;
@@ -317,16 +318,14 @@ async function applyLogic(data, variables) {
         if (!!matchBoxes && matchBoxes.length) {
             depth.push(schema("while", lineNo, {
                 condition: new vm.Script(matchBoxes[0][1]),
-                context: vm.createContext(Object.assign({}, variables)),
+                context: vm.createContext(allVars()),
                 looping: false
             }));
             let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
             depth.last().meta.looping = output = safeEval;
         }
-
-
         if (output) {
-            ret.push(await processData(line, Object.assign({}, variables, depth.getVars()), true));
+            ret.push(await processData(line, allVars(), true));
         }
     }
 
