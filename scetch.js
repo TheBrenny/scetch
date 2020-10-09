@@ -29,7 +29,7 @@ if (!String.prototype.matchAll) {
 }
 
 function engine(filePath, variables, callback) {
-    if (!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root || this.root || scetchDefaults.root, filePath);
+    if (!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root || scetchDefaults.root, filePath);
     if (!filePath.endsWith('.sce')) filePath += '.sce';
 
     let p = fs.readFile(filePath)
@@ -53,27 +53,32 @@ function engine(filePath, variables, callback) {
 }
 
 async function processData(data, variables, noLogic) {
+    if (typeof this.root === "string") scetchOptions.root = this.root;
+    if (typeof this.ext === "string") scetchOptions.ext = this.ext;
+
     return Promise.resolve(data)
-        .then(data => applyPartials.call(this, data))
-        .then(data => applyComponentLoadScripts.call(this, data))
-        .then(data => applyComponentInjections.call(this, data, variables))
-        .then(data => applyVariables.call(this, data, variables))
-        .then(data => noLogic ? data : applyLogic.call(this, data, variables));
+        .then(data => applyPartials(data, variables))
+            .then(data => applyComponentLoadScripts(data))
+            .then(data => applyComponentInjections(data, variables))
+            .then(data => applyVariables(data, variables))
+            .then(data => noLogic ? data : applyLogic(data, variables));
 }
 
-async function applyPartials(data) {
+async function applyPartials(data, variables) {
     const rx = /\[\[i= *(.*?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
     if (!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
-    let root = scetchOptions.root || this.root || scetchDefaults.root;
-    let ext = scetchOptions.ext || this.ext || scetchDefaults.ext;
+    let root = scetchOptions.root || scetchDefaults.root;
+    let ext = scetchOptions.ext || scetchDefaults.ext;
     for (let box of matchBoxes) {
         try {
             let partial = (await fs.readFile(path.join(root, box[1] + ext))).toString();
+            partial = await processData(partial, variables);
             data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), partial);
         } catch (e) {
+            console.error(e);
             continue;
         }
     }
@@ -110,8 +115,8 @@ async function applyComponentLoadScripts(data) {
     if (!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
-    let root = scetchOptions.root || this.root || scetchDefaults.root;
-    let ext = scetchOptions.ext || this.ext || scetchDefaults.ext;
+    let root = scetchOptions.root || scetchDefaults.root;
+    let ext = scetchOptions.ext || scetchDefaults.ext;
 
     let script = `<script>(${scetchInjectScript})();;(()=>{`;
 
@@ -145,8 +150,8 @@ async function applyComponentInjections(data, variables) {
 
     // get opts for all matchboxes
 
-    let root = scetchOptions.root || this.root || scetchDefaults.root;
-    let ext = scetchOptions.ext || this.ext || scetchDefaults.ext;
+    let root = scetchOptions.root || scetchDefaults.root;
+    let ext = scetchOptions.ext || scetchDefaults.ext;
     for (let box of matchBoxes) {
         let matches = (box[2] || "").match(rxV) || [];
         matches = matches.map((el) => el.split("="));
