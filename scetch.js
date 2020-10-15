@@ -1,4 +1,7 @@
-const vm = require('vm');
+// TODO: There's a bug with loops where if the condition fails the first time, we still print the data! fix this!
+//       A fix might be to document this behaviour with a fix (wrap in an if block) and patch in scetch 2.0.0 (major change)?
+
+const vm = require('vm'); // change this to vm2!!
 const path = require('path');
 const fs = require('fs').promises;
 
@@ -26,6 +29,24 @@ if (!String.prototype.matchAll) {
         while ((cap = rx.exec(this)) !== null) all.push(cap);
         return all;
     };
+}
+
+function runInContext(script, context) {
+    try {
+        return vm.runInContext(script, context);
+    } catch (e) {
+        //console.error(e)
+    }
+    return false;
+}
+
+function runInNewContext(script, context) {
+    try {
+        return vm.runInNewContext(script, context);
+    } catch (e) {
+        //console.error(e);
+    }
+    return false;
 }
 
 function engine(filePath, variables, callback) {
@@ -240,7 +261,8 @@ async function applyLogic(data, variables) {
                     }
                     break;
                 case "while":
-                    let safeEval = depth.last().meta.condition.runInContext(depth.last().meta.context);
+                    let safeEval = runInContext(depth.last().meta.condition, depth.last().meta.context);
+                    // let safeEval = depth.last().meta.condition.runInContext(depth.last().meta.context);
                     if (safeEval) {
                         lineNo = depth.last().line;
                     } else {
@@ -257,7 +279,8 @@ async function applyLogic(data, variables) {
             depth.push(schema("if", lineNo, {
                 ran: false
             }));
-            safeEval = vm.runInNewContext(matchBoxes[0][1], allVars()); // lol not so safe...
+            safeEval = runInNewContext(matchBoxes[0][1], allVars());
+            // safeEval = vm.runInNewContext(matchBoxes[0][1], allVars()); // lol not so safe...
             depth.last().meta.ran = output = safeEval;
             continue;
         }
@@ -268,7 +291,8 @@ async function applyLogic(data, variables) {
             if (output || depth.last().meta.ran) output = false;
             else {
                 // else if or just else
-                if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], allVars());
+                if (matchBoxes[0][1] != "") safeEval = runInNewContext(matchBoxes[0][1], allVars());
+                // if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], allVars());
                 else safeEval = true;
 
                 depth.last().meta.ran = output = safeEval;
@@ -287,11 +311,13 @@ async function applyLogic(data, variables) {
                 stop: parseInt(matchBoxes[0][4])
             };
             if (d.start === d.stop) continue; // 0 loop
-            if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way!
-            let v = {
-                [d.varName]: d.val
-            };
-            depth.push(schema("for", lineNo, d, v));
+            else {
+                if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way!
+                let v = {
+                    [d.varName]: d.val
+                };
+                depth.push(schema("for", lineNo, d, v));
+            }
             continue;
         }
 
@@ -317,17 +343,21 @@ async function applyLogic(data, variables) {
         matchBoxes = [...line.matchAll(whileLoop)];
         if (!!matchBoxes && matchBoxes.length) {
             depth.push(schema("while", lineNo, {
-                condition: new vm.Script(matchBoxes[0][1]),
+                condition: matchBoxes[0][1],
                 context: vm.createContext(allVars()),
                 looping: false
             }));
-            let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
+            let safeEval = runInContext(depth.last().meta.condition, dept.last().meta.context);
+            // let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
             depth.last().meta.looping = output = safeEval;
         }
+
         if (output) {
             ret.push(await processData(line, allVars(), true));
         }
     }
+
+    if (depth.length > 0) console.error("depth wasn't emptied! This shouldn't happen! Contents: " + depth.map(d => d.type).join(", "));
 
     data = ret.join("\n");
     return data;
