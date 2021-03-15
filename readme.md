@@ -111,7 +111,10 @@ Partials are synonymous with includes (yeah, just like PHP includes... almost...
   - Else: `[[3= ]]` (else if with no expression)
   - ~~Else: `[[!= else ]]`~~
   - End If: `[[?==]]`
-- Regexes: *`yet to be built`*
+- Regexes:
+  - If: `/\[\[\?= *([^\s=].*?) *\]\]/gi`
+  - Else (If): `/\[\[3= *(.*?) *\]\]/gi`
+  - End If: `/\[\[\?==\]\]/gi`
 
 Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to!
 
@@ -122,7 +125,11 @@ Conditionals provide you with a way to control the flow of your rendered views. 
   - For Each: `[[e= newVar in array ]]` (newVar is a variable, not an index!)
   - While: `[[w= jsBoolEvalExpression() ]]`
   - End Loop: `[[?==]]` (I know, it's the end if! 😮)
-- Regexes: *`yet to be built`*
+- Regexes:
+  - For: `/\[\[f= *(\w+?) *(\d+):(?:(\d+):)?(\d+) *\]\]/gi`
+  - For Each: `/\[\[e= *(\w+) *in *(\w+) *\]\]/gi`
+  - While: `/\[\[w= *(\S.*?) *\]\]/gi`
+  - End Loop: `/\[\[\?==\]\]/gi` (I know, it's the end if! 😮)
 
 Loops allow you to duplicate certain pieces of your template so you can create multiples! The counter loop is inclusive of start, and exclusive of end, so looping from 0 to 10 will provide 0 through 9 (or 10 values).
 
