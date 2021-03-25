@@ -212,10 +212,14 @@ async function applyLogic(data, variables) {
             "type": type, // if, for, each, while
             "line": line || 0, // the line of the start (not reqd always)
             "meta": meta || {}, // any additional info for this type (not reqd always)
-            "vars": vars || {}
+            "vars": vars || {},
+            "output": true
         };
     };
 
+    // TODO: Another output fix would be depth.output where it'll traverse the
+    //       stack finding an "output=flase" and thensaying no to output if
+    //       that's the case.
     let depth = [];
     depth.last = () => depth[depth.length - 1];
     depth.getVars = () => {
@@ -230,15 +234,14 @@ async function applyLogic(data, variables) {
     let ret = [];
     let safeEval;
 
-    let output = true;
-
+    // TODO: Make the scoping of end conditions more correct!
+    // TODO: Read a buffer instead of per line -- this'll allow one-liners
     for (let lineNo = 0; lineNo < data.length; lineNo++) {
         let line = data[lineNo];
 
         if (depth.length > 0 && endConditional.test(line)) {
             switch (depth.last().type) {
                 case "if":
-                    output = true;
                     depth.pop();
                     break;
                 case "for":
@@ -270,6 +273,7 @@ async function applyLogic(data, variables) {
                     }
                     break;
             }
+            // output = true;
             continue;
         }
 
@@ -281,21 +285,21 @@ async function applyLogic(data, variables) {
             }));
             safeEval = runInNewContext(matchBoxes[0][1], allVars());
             // safeEval = vm.runInNewContext(matchBoxes[0][1], allVars()); // lol not so safe...
-            depth.last().meta.ran = output = safeEval;
+            depth.last().meta.ran = depth.last().output = safeEval;
             continue;
         }
 
         // Else If, Else
         matchBoxes = [...line.matchAll(elseIf)];
         if (!!matchBoxes && matchBoxes.length && depth.last().type === "if") {
-            if (output || depth.last().meta.ran) output = false;
+            if (depth.last().output || depth.last().meta.ran) depth.last().output = false;
             else {
                 // else if or just else
                 if (matchBoxes[0][1] != "") safeEval = runInNewContext(matchBoxes[0][1], allVars());
                 // if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], allVars());
                 else safeEval = true;
 
-                depth.last().meta.ran = output = safeEval;
+                depth.last().meta.ran = depth.last().output = safeEval;
             }
             continue;
         }
@@ -303,6 +307,7 @@ async function applyLogic(data, variables) {
         // For each number
         matchBoxes = [...line.matchAll(numberLoop)];
         if (!!matchBoxes && matchBoxes.length) {
+            let out = true;
             let d = {
                 varName: matchBoxes[0][1],
                 start: parseInt(matchBoxes[0][2]),
@@ -310,20 +315,21 @@ async function applyLogic(data, variables) {
                 skip: parseInt(matchBoxes[0][3] || 1),
                 stop: parseInt(matchBoxes[0][4])
             };
-            if (d.start === d.stop) continue; // 0 loop
-            else {
-                if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way!
-                let v = {
-                    [d.varName]: d.val
-                };
-                depth.push(schema("for", lineNo, d, v));
-            }
+            if (d.start === d.stop) // 0 loop
+                out = false;
+            if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way!
+            let v = {
+                [d.varName]: d.val
+            };
+            depth.push(schema("for", lineNo, d, v));
+            depth.last().output = out;
             continue;
         }
 
         // For each OBJECT
         matchBoxes = [...line.matchAll(eachLoop)];
         if (!!matchBoxes && matchBoxes.length) {
+            let out = true;
             let d = {
                 varName: matchBoxes[0][1],
                 idx: 0,
@@ -331,10 +337,13 @@ async function applyLogic(data, variables) {
             };
             if (d.collection) {
                 d.length = d.collection.length;
+                if (d.length === 0)
+                    out = false;
                 let v = {
                     [d.varName]: d.collection[d.idx]
                 };
                 depth.push(schema("each", lineNo, d, v));
+                depth.last().output = out;
             }
             continue;
         }
@@ -349,10 +358,10 @@ async function applyLogic(data, variables) {
             }));
             let safeEval = runInContext(depth.last().meta.condition, dept.last().meta.context);
             // let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
-            depth.last().meta.looping = output = safeEval;
+            depth.last().meta.looping = depth.last().output = safeEval;
         }
 
-        if (output) {
+        if (depth.length == 0 || depth.last().output) {
             ret.push(await processData(line, allVars(), true));
         }
     }
