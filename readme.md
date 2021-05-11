@@ -142,7 +142,7 @@ What you might also notice, is that the end loop tag is identical to the end if 
 - Usage:
   - Prepare component: `[[l= location/to/component ]]` - Places a `script` object where this tag is.
   - Inject component on server: `[[c= location/to/component || obj=obj.variable literal="literal strings" escaped="\"escaped\" values too" ]]`
-  - Inject component on client-side: `js: scetch.insert(target, [position], htmlComponent)`
+  - Inject component on client-side: `js: scetch.insert(target, [position], scetchComponent, data)`
 - Regexes:
   - Prepare: `\[\[l= *(.+?) *\]\]`
   - Injection:
