@@ -5,13 +5,12 @@ module.exports = (function () {
         };
     }
 
-    function getDeepObjectByString(obj, str, def) {
-        def = def === undefined ? str : def;
+    function getDeepObjectByString(obj, str) {
         let parts = str.split(".").reverse();
 
         while (obj != null && parts.length > 0) obj = obj[parts.pop()];
 
-        return obj === undefined ? def : obj;
+        return obj;
     }
 
     globalThis.scetch = globalThis.scetch || {};
@@ -39,7 +38,6 @@ module.exports = (function () {
                 matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
                 for (let box of matchBoxes) {
-                    if (typeof data[box[1]] === 'undefined') continue;
                     let variable = getDeepObjectByString(data, box[1]);
                     if (variable !== undefined) component = component.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
                 }
