@@ -122,8 +122,8 @@ async function applyVariables(data, variables) {
             if (typeof variable === "undefined") break;
             variable = variable[d];
         }
-        if (typeof variable === "undefined") continue;
 
+        // TODO: Stringify 'variable' appropriately.
         if (variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
     }
 
@@ -163,6 +163,10 @@ async function applyComponentLoadScripts(data) {
     return data;
 }
 
+// TODO: dot ops don't work inside components if you don't name it the exact same as inside the component.
+// [[c= component || comp=c ]]
+// [[ comp.hello ]] <-- This won't work
+// [[ [[c]].hello ]] <-- This might (should?) work
 async function applyComponentInjections(data, variables) {
     const rx = /\[\[c= *([^ ]+?)(?: *\|\| *(.+?))? *\]\]/gi;
     const rxV = /(\w+)=("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+)/gi;
@@ -315,8 +319,7 @@ async function applyLogic(data, variables) {
                 skip: parseInt(matchBoxes[0][3] || 1),
                 stop: parseInt(matchBoxes[0][4])
             };
-            if (d.start === d.stop) // 0 loop
-                out = false;
+            if (d.start === d.stop) out = false; // 0 loop
             if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way!
             let v = {
                 [d.varName]: d.val
@@ -335,16 +338,12 @@ async function applyLogic(data, variables) {
                 idx: 0,
                 collection: variables[matchBoxes[0][2]],
             };
-            if (d.collection) {
-                d.length = d.collection.length;
-                if (d.length === 0)
-                    out = false;
-                let v = {
-                    [d.varName]: d.collection[d.idx]
-                };
-                depth.push(schema("each", lineNo, d, v));
-                depth.last().output = out;
-            }
+            d.length = (d.collection || []).length;
+            if (d.length === 0) out = false;
+            let v = {};
+            if (d.collection) v[d.varName] = d.collection[d.idx];
+            depth.push(schema("each", lineNo, d, v));
+            depth.last().output = out;
             continue;
         }
 
