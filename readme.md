@@ -51,11 +51,11 @@ router.get('/callback-*', (req, res) => {
     });
 });
 router.get('/promise-*', async function (req, res) => {
-  res.write(await scetch.engine('home'), {
+    res.write(await scetch.engine('home', {
         url: req.url,
         time: new Date().toLocaleString()
-    }).end;
-})
+    })).end();
+});
 ```
 
 #### Express
@@ -81,6 +81,8 @@ app.get('/*', (req,res) => {
 ## `sce` How To
 
 scetch offers a variety of handlebar-like expressions to make your templates easy to manage:
+ <!-- no toc -->
+- [Options](#options)
 - [Variables](#variables)
 - [Partials](#partials)
 - [Conditionals](#conditionals)
@@ -88,6 +90,20 @@ scetch offers a variety of handlebar-like expressions to make your templates eas
 - [Components](#components)
 
 These expressions are found using Regular Expressions, therefore, scetch is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
+
+### Options
+
+scetch has a couple of options that you can use to override the default settings of how you expect it to function. This list is by no means exhaustive, and it can even change with any update - fair warning.
+
+The following are the default settings, and can be changed by modifying the values.
+
+```js
+const scetch = require("scetch")({
+    root: path.join(__dirname, 'views'),
+    ext: ".sce",
+    nonceName: "nonce"
+});
+```
 
 ### Variables
 
@@ -151,6 +167,10 @@ What you might also notice, is that the end loop tag is identical to the end if 
     - RegExr: https://regexr.com/5bimv and https://regexr.com/5biqb
 
 Components in scetch allow you to render partials both statically and dynamically! You can render the partial before sending data to the client by using `c=`, allowing you to, for example, add multiple rows of todos! Then if the client wants a new todo, the global scetch object can insert one on your command! By calling `scetch.insert($(".todos"), "beforeend", scetch.comps.todo)`, you can add a new todo component before the closing tag of the todo list!
+
+Nonce use is available to help secure your web apps! One package (also written by TheBrenny) that can help become a middleware to ExpressJS is [`nonce-express`](https://github.com/TheBrenny/nonce-express).
+
+Alternatively, nonces can be set by setting a variable during `res.render` or `scetch.engine`.
 
 *See also! `scetch.insert` is more-or-less a wrapper for [`insertAdjacentHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML). Go there to understand the arguments!*
 

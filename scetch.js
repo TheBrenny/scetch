@@ -9,7 +9,8 @@ const scetchInjectScript = require("./util/scetchInjectScript").toString();
 
 let scetchDefaults = {
     root: path.join(__dirname, 'views'),
-    ext: ".sce"
+    ext: ".sce",
+    nonceName: "nonce"
 };
 let scetchOptions = {};
 
@@ -50,7 +51,7 @@ function runInNewContext(script, context) {
 }
 
 function engine(filePath, variables, callback) {
-    if (!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root || scetchDefaults.root, filePath);
+    if (!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root, filePath);
     if (!filePath.endsWith('.sce')) filePath += '.sce';
 
     let p = fs.readFile(filePath)
@@ -79,7 +80,7 @@ async function processData(data, variables, noLogic) {
 
     return Promise.resolve(data)
         .then(data => applyPartials(data, variables))
-        .then(data => applyComponentLoadScripts(data))
+        .then(data => applyComponentLoadScripts(data, variables))
         .then(data => applyComponentInjections(data, variables))
         .then(data => applyVariables(data, variables))
         .then(data => noLogic ? data : applyLogic(data, variables));
@@ -91,8 +92,8 @@ async function applyPartials(data, variables) {
     if (!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
-    let root = scetchOptions.root || scetchDefaults.root;
-    let ext = scetchOptions.ext || scetchDefaults.ext;
+    let root = scetchOptions.root;
+    let ext = scetchOptions.ext;
     for (let box of matchBoxes) {
         try {
             let partial = (await fs.readFile(path.join(root, box[1] + ext))).toString();
@@ -130,16 +131,17 @@ async function applyVariables(data, variables) {
     return data;
 }
 
-async function applyComponentLoadScripts(data) {
+async function applyComponentLoadScripts(data, variables) {
     const rx = /\[\[l= *(.+?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
     if (!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
-    let root = scetchOptions.root || scetchDefaults.root;
-    let ext = scetchOptions.ext || scetchDefaults.ext;
+    let root = scetchOptions.root;
+    let ext = scetchOptions.ext;
 
-    let script = `<script>(${scetchInjectScript})();;(()=>{`;
+    // TODO: Change this to actually retrieving the passed nonce
+    let script = `<script nonce="${variables[scetchOptions.nonceName]}">(${scetchInjectScript})();;(()=>{`;
 
     for (let box of matchBoxes) {
         try {
@@ -175,8 +177,8 @@ async function applyComponentInjections(data, variables) {
 
     // get opts for all matchboxes
 
-    let root = scetchOptions.root || scetchDefaults.root;
-    let ext = scetchOptions.ext || scetchDefaults.ext;
+    let root = scetchOptions.root;
+    let ext = scetchOptions.ext;
     for (let box of matchBoxes) {
         let matches = (box[2] || "").match(rxV) || [];
         matches = matches.map((el) => el.split("="));
@@ -382,6 +384,7 @@ module.exports.override = (key, value) => {
 };
 module.exports.engine = engine;
 module.exports = (opts) => {
-    if (typeof opts !== "undefined") this.override(opts);
+    scetchOptions = Object.assign({}, scetchDefaults, opts || {});
+    // if (typeof opts !== "undefined") this.override(opts);
     return this;
 };
