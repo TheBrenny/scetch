@@ -32,7 +32,7 @@ module.exports = (function () {
         data = data || {};
 
         if (!!Object.getOwnPropertyNames(data).length) {
-            const rx = /\[\[(?!.*=) *(.*?) *\]\]/gi;
+            const rx = /\[\[ *(.*?) *\]\]/gi;
             let matchBoxes = [...component.matchAll(rx)];
             if (matchBoxes && matchBoxes.length) {
                 matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
