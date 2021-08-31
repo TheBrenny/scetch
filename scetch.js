@@ -211,7 +211,10 @@ async function applyLogic(data, variables) {
     const eachLoop = /\[\[e= *(\w+) *in *(\w+) *\]\]/gi;
     const whileLoop = /\[\[w= *(\S.*?) *\]\]/gi;
 
-    data = data.split("\n");
+    // instead of splitting on each line, we split on what *COULD BE* a closing scetch tag.
+    // This allows us to break single line scetch conditionals and operate on them as if they were multiline.
+    // data = data.split("\n");
+    data = data.split("[[").map((e, i, a) => i === 0 ? e : "[[" + e);
 
     let schema = (type, line, meta, vars) => {
         return {
@@ -241,7 +244,8 @@ async function applyLogic(data, variables) {
     let safeEval;
 
     // TODO: Make the scoping of end conditions more correct!
-    // TODO: Read a buffer instead of per line -- this'll allow one-liners
+    // TODO: Read a buffer instead of per line -- this'll allow one-liners -- FIXED?
+    // More appropriate names would be chunkNo, and chunk instead of lines
     for (let lineNo = 0; lineNo < data.length; lineNo++) {
         let line = data[lineNo];
 
@@ -279,7 +283,6 @@ async function applyLogic(data, variables) {
                     }
                     break;
             }
-            // output = true;
             continue;
         }
 
@@ -326,6 +329,7 @@ async function applyLogic(data, variables) {
             let v = {
                 [d.varName]: d.val
             };
+            if (depth.length > 0) out = out && depth.last().output;
             depth.push(schema("for", lineNo, d, v));
             depth.last().output = out;
             continue;
@@ -344,6 +348,7 @@ async function applyLogic(data, variables) {
             if (d.length === 0) out = false;
             let v = {};
             if (d.collection) v[d.varName] = d.collection[d.idx];
+            if (depth.length > 0) out = out && depth.last().output;
             depth.push(schema("each", lineNo, d, v));
             depth.last().output = out;
             continue;
@@ -352,6 +357,8 @@ async function applyLogic(data, variables) {
         // While Loop
         matchBoxes = [...line.matchAll(whileLoop)];
         if (!!matchBoxes && matchBoxes.length) {
+            let out = true;
+            if (depth.length > 0) out = out && depth.last().output;
             depth.push(schema("while", lineNo, {
                 condition: matchBoxes[0][1],
                 context: vm.createContext(allVars()),
@@ -359,7 +366,7 @@ async function applyLogic(data, variables) {
             }));
             let safeEval = runInContext(depth.last().meta.condition, dept.last().meta.context);
             // let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
-            depth.last().meta.looping = depth.last().output = safeEval;
+            depth.last().meta.looping = depth.last().output = safeEval && out;
         }
 
         if (depth.length == 0 || depth.last().output) {
@@ -369,7 +376,7 @@ async function applyLogic(data, variables) {
 
     if (depth.length > 0) console.error("depth wasn't emptied! This shouldn't happen! Contents: " + depth.map(d => d.type).join(", "));
 
-    data = ret.join("\n");
+    data = ret.join("");
     return data;
 }
 
