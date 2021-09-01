@@ -295,7 +295,7 @@ async function applyLogic(data, variables) {
             safeEval = runInNewContext(matchBoxes[0][1], allVars());
             // safeEval = vm.runInNewContext(matchBoxes[0][1], allVars()); // lol not so safe...
             depth.last().meta.ran = depth.last().output = safeEval;
-            continue;
+            line = line.substring(matchBoxes[0][0].length);
         }
 
         // Else If, Else
@@ -310,7 +310,7 @@ async function applyLogic(data, variables) {
 
                 depth.last().meta.ran = depth.last().output = safeEval;
             }
-            continue;
+            line = line.substring(matchBoxes[0][0].length);
         }
 
         // For each number
@@ -325,14 +325,14 @@ async function applyLogic(data, variables) {
                 stop: parseInt(matchBoxes[0][4])
             };
             if (d.start === d.stop) out = false; // 0 loop
-            if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way!
+            if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way! -- TODO: Handle this better
             let v = {
                 [d.varName]: d.val
             };
             if (depth.length > 0) out = out && depth.last().output;
             depth.push(schema("for", lineNo, d, v));
             depth.last().output = out;
-            continue;
+            line = line.substring(matchBoxes[0][0].length);
         }
 
         // For each OBJECT
@@ -351,7 +351,7 @@ async function applyLogic(data, variables) {
             if (depth.length > 0) out = out && depth.last().output;
             depth.push(schema("each", lineNo, d, v));
             depth.last().output = out;
-            continue;
+            line = line.substring(matchBoxes[0][0].length);
         }
 
         // While Loop
@@ -367,6 +367,7 @@ async function applyLogic(data, variables) {
             let safeEval = runInContext(depth.last().meta.condition, dept.last().meta.context);
             // let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
             depth.last().meta.looping = depth.last().output = safeEval && out;
+            line = line.substring(matchBoxes[0][0].length);
         }
 
         if (depth.length == 0 || depth.last().output) {
