@@ -5,7 +5,7 @@ const vm = require('vm'); // change this to vm2!!
 const path = require('path');
 const fs = require('fs').promises;
 
-const scetchInjectScript = require("./util/scetchInjectScript").toString();
+const scetchInjectScript = require("./util/scetchInjectScript");
 
 let scetchDefaults = {
     root: path.join(__dirname, 'views'),
@@ -113,7 +113,7 @@ async function applyVariables(data, variables) {
     const rx = /\[\[[^\[=]*? *([^\[\]\s]+?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
     if (!matchBoxes || !matchBoxes.length) return data;
-    matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
+    matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i); // TODO: Fix this filter
 
     for (let box of matchBoxes) {
         let dotNot = box[1].split('.');
@@ -140,7 +140,6 @@ async function applyComponentLoadScripts(data, variables) {
     let root = scetchOptions.root;
     let ext = scetchOptions.ext;
 
-    // TODO: Change this to actually retrieving the passed nonce
     let script = `<script nonce="${variables[scetchOptions.nonceName]}">(${scetchInjectScript})();;(()=>{`;
 
     for (let box of matchBoxes) {
@@ -153,6 +152,7 @@ async function applyComponentLoadScripts(data, variables) {
 
             data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), ""); // remove all component references
         } catch (e) {
+            console.error(e);
             continue;
         }
     }
@@ -205,6 +205,7 @@ async function applyComponentInjections(data, variables) {
 async function applyLogic(data, variables) {
     // The name is quite suiting... 🤣🙃
     const endConditional = /\[\[\?==\]\]/gi;
+    const endConditionalString = "[[?==]]";
     const ifOpen = /\[\[\?= *([^\s=].*?) *\]\]/gi;
     const elseIf = /\[\[3= *(.*?) *\]\]/gi;
     const numberLoop = /\[\[f= *(\w+?) *(\d+):(?:(\d+):)?(\d+) *\]\]/gi;
@@ -215,6 +216,7 @@ async function applyLogic(data, variables) {
     // This allows us to break single line scetch conditionals and operate on them as if they were multiline.
     // data = data.split("\n");
     data = data.split("[[").map((e, i, a) => i === 0 ? e : "[[" + e);
+    let buffer = []; // the buffer is used to store manipulated lines (ie, opening loop lines). this means we can loop back to them once they've been processed without re-processing the loop itself
 
     let schema = (type, line, meta, vars) => {
         return {
@@ -247,9 +249,11 @@ async function applyLogic(data, variables) {
     // TODO: Read a buffer instead of per line -- this'll allow one-liners -- FIXED?
     // More appropriate names would be chunkNo, and chunk instead of lines
     for (let lineNo = 0; lineNo < data.length; lineNo++) {
-        let line = data[lineNo];
+        let line = buffer[lineNo] || data[lineNo];
 
         if (depth.length > 0 && endConditional.test(line)) {
+            // if relooping, continue so we don't end the block
+            // this means if we're popping from the stack, then we break so we can continue reading the file
             switch (depth.last().type) {
                 case "if":
                     depth.pop();
@@ -259,31 +263,34 @@ async function applyLogic(data, variables) {
                     if (depth.last().meta.val >= depth.last().meta.stop) {
                         //break loop
                         depth.pop();
+                        break;
                     } else {
                         depth.last().vars[depth.last().meta.varName] = depth.last().meta.val;
-                        lineNo = depth.last().line;
+                        lineNo = depth.last().line-1; // line-1 so we can process the start of the loop that's in the buffer
                     }
-                    break;
+                    continue;
                 case "each":
                     depth.last().meta.idx++;
                     if (depth.last().meta.idx >= depth.last().meta.length) {
                         depth.pop();
+                        break;
                     } else {
                         depth.last().vars[depth.last().meta.varName] = depth.last().meta.collection[depth.last().meta.idx];
-                        lineNo = depth.last().line;
+                        lineNo = depth.last().line-1;
                     }
-                    break;
+                    continue;
                 case "while":
                     let safeEval = runInContext(depth.last().meta.condition, depth.last().meta.context);
                     // let safeEval = depth.last().meta.condition.runInContext(depth.last().meta.context);
                     if (safeEval) {
-                        lineNo = depth.last().line;
+                        lineNo = depth.last().line-1;
                     } else {
                         depth.pop();
+                        break;
                     }
-                    break;
+                    continue;
             }
-            continue;
+            line = line.substring(endConditionalString.length);
         }
 
         // Opening If
@@ -333,6 +340,7 @@ async function applyLogic(data, variables) {
             depth.push(schema("for", lineNo, d, v));
             depth.last().output = out;
             line = line.substring(matchBoxes[0][0].length);
+            buffer[lineNo] = line;
         }
 
         // For each OBJECT
@@ -352,6 +360,7 @@ async function applyLogic(data, variables) {
             depth.push(schema("each", lineNo, d, v));
             depth.last().output = out;
             line = line.substring(matchBoxes[0][0].length);
+            buffer[lineNo] = line;
         }
 
         // While Loop
@@ -368,6 +377,7 @@ async function applyLogic(data, variables) {
             // let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
             depth.last().meta.looping = depth.last().output = safeEval && out;
             line = line.substring(matchBoxes[0][0].length);
+            buffer[lineNo] = line;
         }
 
         if (depth.length == 0 || depth.last().output) {
