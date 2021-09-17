@@ -1,6 +1,6 @@
 {
   "name": "scetch",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "a templating engine thats different. probably.",
   "main": "scetch.js",
   "scripts": {
