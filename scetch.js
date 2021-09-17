@@ -83,6 +83,11 @@ function engine(filePath, variables, callback) {
     if(!callback) return p;
 }
 
+// TODO: Refactor this to only handle the top level collecting of scetch fragments
+// Once we have the complete scetch file, we should then operate on it
+// Operating on it means: apply variables and logic. This means partials, load and injections
+// should happen beforehand.
+// The final scetch load script should be added to the end of this big blob of now-HTML code.
 async function processData(data, variables, noLogic) {
     if(typeof this.root === "string") scetchOptions.root = this.root;
     if(typeof this.ext === "string") scetchOptions.ext = this.ext;
@@ -213,7 +218,7 @@ async function applyComponentInjections(data, variables) {
 
 async function applyLogic(data, variables) {
     // The name is quite suiting... 🤣🙃
-    const endConditional = /\[\[\?==\]\]/gi;
+    const endConditional = /\[\[\?==\]\]/i;
     const endConditionalString = "[[?==]]";
     const ifOpen = /\[\[\?= *([^\s=].*?) *\]\]/gi;
     const elseIf = /\[\[3= *(.*?) *\]\]/gi;
@@ -260,7 +265,7 @@ async function applyLogic(data, variables) {
     for(let lineNo = 0; lineNo < data.length; lineNo++) {
         let line = buffer[lineNo] || data[lineNo];
 
-        if(depth.length > 0 && endConditional.test(line)) {
+        if(depth.length > 0 && line.includes(endConditionalString)) {
             // if relooping, continue so we don't end the block
             // this means if we're popping from the stack, then we break so we can continue reading the file
             switch(depth.last().type) {
