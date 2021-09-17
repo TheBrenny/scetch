@@ -31,6 +31,15 @@ if(!String.prototype.matchAll) {
         return all;
     };
 }
+if(!String.prototype.replaceAll) {
+    String.prototype.replaceAll = function (search, replacement) {
+        if(search instanceof RegExp) {
+            search = new Regexp(search.source, search.flags + (search.global ? "" : "g"));
+            return this.replace(search, replacement);
+        }
+        return this.split(search).join(replacement);
+    };
+}
 
 function runInContext(script, context) {
     try {
@@ -98,7 +107,7 @@ async function applyPartials(data, variables) {
         try {
             let partial = (await fs.readFile(path.join(root, box[1] + ext))).toString();
             partial = await processData(partial, variables);
-            data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), partial);
+            data = data.replaceAll(box[0], partial);
         } catch(e) {
             console.error(e);
             continue;
