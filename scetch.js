@@ -15,19 +15,19 @@ let scetchDefaults = {
 let scetchOptions = {};
 
 // Escape polyfill because that's how we replace all.
-if (!RegExp.escape) {
+if(!RegExp.escape) {
     RegExp.escape = function (s) {
         return String(s).replace(/[\\^$*+?.()|[\]{}]/g, '\\$&');
     };
 }
 // Matchall polyfill - this is how we handle Node <12
-if (!String.prototype.matchAll) {
+if(!String.prototype.matchAll) {
     String.prototype.matchAll = function (rx) {
-        if (typeof rx === "string") rx = new RegExp(rx, "g");
+        if(typeof rx === "string") rx = new RegExp(rx, "g");
         rx = new RegExp(rx);
         let cap = [];
         let all = [];
-        while ((cap = rx.exec(this)) !== null) all.push(cap);
+        while((cap = rx.exec(this)) !== null) all.push(cap);
         return all;
     };
 }
@@ -35,7 +35,7 @@ if (!String.prototype.matchAll) {
 function runInContext(script, context) {
     try {
         return vm.runInContext(script, context);
-    } catch (e) {
+    } catch(e) {
         //console.error(e)
     }
     return false;
@@ -44,39 +44,39 @@ function runInContext(script, context) {
 function runInNewContext(script, context) {
     try {
         return vm.runInNewContext(script, context);
-    } catch (e) {
+    } catch(e) {
         //console.error(e);
     }
     return false;
 }
 
 function engine(filePath, variables, callback) {
-    if (!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root, filePath);
-    if (!filePath.endsWith('.sce')) filePath += '.sce';
+    if(!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root, filePath);
+    if(!filePath.endsWith('.sce')) filePath += '.sce';
 
     let p = fs.readFile(filePath)
         .then(data => data.toString())
         .then(data => processData.call(this, data, variables))
         .then(data => applyVariables.call(this, data, variables))
         .then(data => {
-            if (!callback) return data;
+            if(!callback) return data;
             callback(null, data);
         }).catch(err => {
-            if (!callback) return err;
+            if(!callback) return err;
 
             try {
                 callback(err);
-            } catch (catchErr) {
+            } catch(catchErr) {
                 console.error("FATAL?");
                 console.error(catchErr);
             }
         });
-    if (!callback) return p;
+    if(!callback) return p;
 }
 
 async function processData(data, variables, noLogic) {
-    if (typeof this.root === "string") scetchOptions.root = this.root;
-    if (typeof this.ext === "string") scetchOptions.ext = this.ext;
+    if(typeof this.root === "string") scetchOptions.root = this.root;
+    if(typeof this.ext === "string") scetchOptions.ext = this.ext;
 
     return Promise.resolve(data)
         .then(data => applyPartials(data, variables))
@@ -89,17 +89,17 @@ async function processData(data, variables, noLogic) {
 async function applyPartials(data, variables) {
     const rx = /\[\[i= *(.*?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
-    if (!matchBoxes || !matchBoxes.length) return data;
+    if(!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
     let root = scetchOptions.root;
     let ext = scetchOptions.ext;
-    for (let box of matchBoxes) {
+    for(let box of matchBoxes) {
         try {
             let partial = (await fs.readFile(path.join(root, box[1] + ext))).toString();
             partial = await processData(partial, variables);
             data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), partial);
-        } catch (e) {
+        } catch(e) {
             console.error(e);
             continue;
         }
@@ -109,23 +109,23 @@ async function applyPartials(data, variables) {
 }
 
 async function applyVariables(data, variables) {
-    if (typeof variables === "undefined" || Object.getOwnPropertyNames(variables).length === 0) return data;
+    if(typeof variables === "undefined" || Object.getOwnPropertyNames(variables).length === 0) return data;
     const rx = /\[\[[^\[=]*? *([^\[\]\s]+?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
-    if (!matchBoxes || !matchBoxes.length) return data;
+    if(!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i); // TODO: Fix this filter
 
-    for (let box of matchBoxes) {
+    for(let box of matchBoxes) {
         let dotNot = box[1].split('.');
 
         let variable = variables;
-        for (let d of dotNot) {
-            if (typeof variable === "undefined") break;
+        for(let d of dotNot) {
+            if(typeof variable === "undefined") break;
             variable = variable[d];
         }
 
         // TODO: Stringify 'variable' appropriately.
-        if (variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
+        if(variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
     }
 
     return data;
@@ -134,7 +134,7 @@ async function applyVariables(data, variables) {
 async function applyComponentLoadScripts(data, variables) {
     const rx = /\[\[l= *(.+?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
-    if (!matchBoxes || !matchBoxes.length) return data;
+    if(!matchBoxes || !matchBoxes.length) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
     let root = scetchOptions.root;
@@ -142,7 +142,7 @@ async function applyComponentLoadScripts(data, variables) {
 
     let script = `<script nonce="${variables[scetchOptions.nonceName]}">(${scetchInjectScript})();;(()=>{`;
 
-    for (let box of matchBoxes) {
+    for(let box of matchBoxes) {
         try {
             let p = path.join(root, box[1] + ext);
             let componentName = path.basename(p, ext);
@@ -151,7 +151,7 @@ async function applyComponentLoadScripts(data, variables) {
             script += `scetch["${componentName}"] = \`${component}\`;\n`;
 
             data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), ""); // remove all component references
-        } catch (e) {
+        } catch(e) {
             console.error(e);
             continue;
         }
@@ -173,19 +173,19 @@ async function applyComponentInjections(data, variables) {
     const rx = /\[\[c= *([^ ]+?)(?: *\|\| *(.+?))? *\]\]/gi;
     const rxV = /(\w+)=("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+)/gi;
     let matchBoxes = [...data.matchAll(rx)];
-    if (!matchBoxes || !matchBoxes.length) return data;
+    if(!matchBoxes || !matchBoxes.length) return data;
 
     // get opts for all matchboxes
 
     let root = scetchOptions.root;
     let ext = scetchOptions.ext;
-    for (let box of matchBoxes) {
+    for(let box of matchBoxes) {
         let matches = (box[2] || "").match(rxV) || [];
         matches = matches.map((el) => el.split("="));
         let options = {};
 
-        for (let opt of matches) {
-            if (opt[1].startsWith("\"")) opt[1] = opt[1].substring(1, opt[1].length - 1).replace(/\\"/gi, "\"");
+        for(let opt of matches) {
+            if(opt[1].startsWith("\"")) opt[1] = opt[1].substring(1, opt[1].length - 1).replace(/\\"/gi, "\"");
             else opt[1] = variables[opt[1]] || `[[ ${opt[1]} ]]`;
             options[opt[0]] = opt[1];
         }
@@ -194,7 +194,7 @@ async function applyComponentInjections(data, variables) {
             let component = (await fs.readFile(path.join(root, box[1] + ext))).toString();
             component = await processData(component, options);
             data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), component);
-        } catch (e) {
+        } catch(e) {
             continue;
         }
     }
@@ -235,7 +235,7 @@ async function applyLogic(data, variables) {
     depth.last = () => depth[depth.length - 1];
     depth.getVars = () => {
         let o = {};
-        for (let d of depth) {
+        for(let d of depth) {
             o = Object.assign(o, d.vars);
         }
         return o;
@@ -248,42 +248,42 @@ async function applyLogic(data, variables) {
     // TODO: Make the scoping of end conditions more correct!
     // TODO: Read a buffer instead of per line -- this'll allow one-liners -- FIXED?
     // More appropriate names would be chunkNo, and chunk instead of lines
-    for (let lineNo = 0; lineNo < data.length; lineNo++) {
+    for(let lineNo = 0; lineNo < data.length; lineNo++) {
         let line = buffer[lineNo] || data[lineNo];
 
-        if (depth.length > 0 && endConditional.test(line)) {
+        if(depth.length > 0 && endConditional.test(line)) {
             // if relooping, continue so we don't end the block
             // this means if we're popping from the stack, then we break so we can continue reading the file
-            switch (depth.last().type) {
+            switch(depth.last().type) {
                 case "if":
                     depth.pop();
                     break;
                 case "for":
                     depth.last().meta.val += depth.last().meta.skip;
-                    if (depth.last().meta.val >= depth.last().meta.stop) {
+                    if(depth.last().meta.val >= depth.last().meta.stop) {
                         //break loop
                         depth.pop();
                         break;
                     } else {
                         depth.last().vars[depth.last().meta.varName] = depth.last().meta.val;
-                        lineNo = depth.last().line-1; // line-1 so we can process the start of the loop that's in the buffer
+                        lineNo = depth.last().line - 1; // line-1 so we can process the start of the loop that's in the buffer
                     }
                     continue;
                 case "each":
                     depth.last().meta.idx++;
-                    if (depth.last().meta.idx >= depth.last().meta.length) {
+                    if(depth.last().meta.idx >= depth.last().meta.length) {
                         depth.pop();
                         break;
                     } else {
                         depth.last().vars[depth.last().meta.varName] = depth.last().meta.collection[depth.last().meta.idx];
-                        lineNo = depth.last().line-1;
+                        lineNo = depth.last().line - 1;
                     }
                     continue;
                 case "while":
                     let safeEval = runInContext(depth.last().meta.condition, depth.last().meta.context);
                     // let safeEval = depth.last().meta.condition.runInContext(depth.last().meta.context);
-                    if (safeEval) {
-                        lineNo = depth.last().line-1;
+                    if(safeEval) {
+                        lineNo = depth.last().line - 1;
                     } else {
                         depth.pop();
                         break;
@@ -295,7 +295,7 @@ async function applyLogic(data, variables) {
 
         // Opening If
         let matchBoxes = [...line.matchAll(ifOpen)];
-        if (!!matchBoxes && matchBoxes.length) {
+        if(!!matchBoxes && matchBoxes.length) {
             depth.push(schema("if", lineNo, {
                 ran: false
             }));
@@ -307,11 +307,11 @@ async function applyLogic(data, variables) {
 
         // Else If, Else
         matchBoxes = [...line.matchAll(elseIf)];
-        if (!!matchBoxes && matchBoxes.length && depth.last().type === "if") {
-            if (depth.last().output || depth.last().meta.ran) depth.last().output = false;
+        if(!!matchBoxes && matchBoxes.length && depth.last().type === "if") {
+            if(depth.last().output || depth.last().meta.ran) depth.last().output = false;
             else {
                 // else if or just else
-                if (matchBoxes[0][1] != "") safeEval = runInNewContext(matchBoxes[0][1], allVars());
+                if(matchBoxes[0][1] != "") safeEval = runInNewContext(matchBoxes[0][1], allVars());
                 // if (matchBoxes[0][1] != "") safeEval = vm.runInNewContext(matchBoxes[0][1], allVars());
                 else safeEval = true;
 
@@ -322,7 +322,7 @@ async function applyLogic(data, variables) {
 
         // For each number
         matchBoxes = [...line.matchAll(numberLoop)];
-        if (!!matchBoxes && matchBoxes.length) {
+        if(!!matchBoxes && matchBoxes.length) {
             let out = true;
             let d = {
                 varName: matchBoxes[0][1],
@@ -331,12 +331,12 @@ async function applyLogic(data, variables) {
                 skip: parseInt(matchBoxes[0][3] || 1),
                 stop: parseInt(matchBoxes[0][4])
             };
-            if (d.start === d.stop) out = false; // 0 loop
-            if (Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way! -- TODO: Handle this better
+            if(d.start === d.stop) out = false; // 0 loop
+            if(Math.sign(d.stop - d.start) != Math.sign(d.skip)) continue; // iterating wrong way! -- TODO: Handle this better
             let v = {
                 [d.varName]: d.val
             };
-            if (depth.length > 0) out = out && depth.last().output;
+            if(depth.length > 0) out = out && depth.last().output;
             depth.push(schema("for", lineNo, d, v));
             depth.last().output = out;
             line = line.substring(matchBoxes[0][0].length);
@@ -345,7 +345,7 @@ async function applyLogic(data, variables) {
 
         // For each OBJECT
         matchBoxes = [...line.matchAll(eachLoop)];
-        if (!!matchBoxes && matchBoxes.length) {
+        if(!!matchBoxes && matchBoxes.length) {
             let out = true;
             let d = {
                 varName: matchBoxes[0][1],
@@ -353,10 +353,10 @@ async function applyLogic(data, variables) {
                 collection: variables[matchBoxes[0][2]],
             };
             d.length = (d.collection || []).length;
-            if (d.length === 0) out = false;
+            if(d.length === 0) out = false;
             let v = {};
-            if (d.collection) v[d.varName] = d.collection[d.idx];
-            if (depth.length > 0) out = out && depth.last().output;
+            if(d.collection) v[d.varName] = d.collection[d.idx];
+            if(depth.length > 0) out = out && depth.last().output;
             depth.push(schema("each", lineNo, d, v));
             depth.last().output = out;
             line = line.substring(matchBoxes[0][0].length);
@@ -365,9 +365,9 @@ async function applyLogic(data, variables) {
 
         // While Loop
         matchBoxes = [...line.matchAll(whileLoop)];
-        if (!!matchBoxes && matchBoxes.length) {
+        if(!!matchBoxes && matchBoxes.length) {
             let out = true;
-            if (depth.length > 0) out = out && depth.last().output;
+            if(depth.length > 0) out = out && depth.last().output;
             depth.push(schema("while", lineNo, {
                 condition: matchBoxes[0][1],
                 context: vm.createContext(allVars()),
@@ -380,23 +380,23 @@ async function applyLogic(data, variables) {
             buffer[lineNo] = line;
         }
 
-        if (depth.length == 0 || depth.last().output) {
+        if(depth.length == 0 || depth.last().output) {
             ret.push(await processData(line, allVars(), true));
         }
     }
 
-    if (depth.length > 0) console.error("depth wasn't emptied! This shouldn't happen! Contents: " + depth.map(d => d.type).join(", "));
+    if(depth.length > 0) console.error("depth wasn't emptied! This shouldn't happen! Contents: " + depth.map(d => d.type).join(", "));
 
     data = ret.join("");
     return data;
 }
 
 module.exports.override = (key, value) => {
-    if (typeof key === 'object') {
-        for (const k in key) {
-            if (key.hasOwnProperty(k)) this.override(k, key[k]);
+    if(typeof key === 'object') {
+        for(const k in key) {
+            if(key.hasOwnProperty(k)) this.override(k, key[k]);
         }
-    } else if (typeof key === 'string' && typeof value !== 'undefined') {
+    } else if(typeof key === 'string' && typeof value !== 'undefined') {
         scetchOptions[key] = value;
     }
 };
