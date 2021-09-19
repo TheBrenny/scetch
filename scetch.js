@@ -405,6 +405,10 @@ async function applyLogic(data, variables) {
     return data;
 }
 
+module.exports = (opts) => {
+    scetchOptions = Object.assign({}, scetchDefaults, opts || {});
+    return this;
+};
 module.exports.override = (key, value) => {
     if(typeof key === 'object') {
         for(const k in key) {
@@ -415,8 +419,3 @@ module.exports.override = (key, value) => {
     }
 };
 module.exports.engine = engine;
-module.exports = (opts) => {
-    scetchOptions = Object.assign({}, scetchDefaults, opts || {});
-    // if (typeof opts !== "undefined") this.override(opts);
-    return this;
-};
