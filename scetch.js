@@ -31,6 +31,7 @@ if(!String.prototype.matchAll) {
         return all;
     };
 }
+// Replaceall polyfill - this isn't the exact way, but its our way instead
 if(!String.prototype.replaceAll) {
     String.prototype.replaceAll = function (search, replacement) {
         if(search instanceof RegExp) {
@@ -94,10 +95,10 @@ async function processData(data, variables, noLogic) {
 
     return Promise.resolve(data)
         .then(data => applyPartials(data, variables))
-        .then(data => applyComponentLoadScripts(data, variables))
         .then(data => applyComponentInjections(data, variables))
+        .then(data => noLogic ? data : applyLogic(data, variables))
         .then(data => applyVariables(data, variables))
-        .then(data => noLogic ? data : applyLogic(data, variables));
+        .then(data => applyComponentLoadScripts(data, variables));
 }
 
 async function applyPartials(data, variables) {
