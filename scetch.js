@@ -407,12 +407,12 @@ async function applyLogic(data, variables) {
 
 module.exports = (opts) => {
     scetchOptions = Object.assign({}, scetchDefaults, opts || {});
-    return this;
+    return module.exports;
 };
 module.exports.override = (key, value) => {
     if(typeof key === 'object') {
         for(const k in key) {
-            if(key.hasOwnProperty(k)) this.override(k, key[k]);
+            if(key.hasOwnProperty(k)) module.exports.override(k, key[k]);
         }
     } else if(typeof key === 'string' && typeof value !== 'undefined') {
         scetchOptions[key] = value;
