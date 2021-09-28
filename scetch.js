@@ -67,6 +67,7 @@ function engine(filePath, variables, callback) {
         .then(data => data.toString())
         .then(data => processData.call(this, data, variables))
         .then(data => applyVariables.call(this, data, variables))
+        .then(data => applyComponentLoadScripts.call(this, data, variables))
         .then(data => {
             if(!callback) return data;
             callback(null, data);
@@ -88,13 +89,15 @@ function engine(filePath, variables, callback) {
 // Operating on it means: apply variables and logic. This means partials, load and injections
 // should happen beforehand.
 // The final scetch load script should be added to the end of this big blob of now-HTML code.
+// We need to track the scetch'd file in an object so we can recurse with logic and variables,
+// and then apply the final scetch load script to the end of the file.
+// But then again, maybe we just did it?
 async function processData(data, variables, noLogic) {
     if(typeof this.root === "string") scetchOptions.root = this.root;
     if(typeof this.ext === "string") scetchOptions.ext = this.ext;
 
     return Promise.resolve(data)
         .then(data => applyPartials(data, variables))
-        .then(data => applyComponentLoadScripts(data, variables))
         .then(data => applyComponentInjections(data, variables))
         .then(data => applyVariables(data, variables))
         .then(data => noLogic ? data : applyLogic(data, variables));
