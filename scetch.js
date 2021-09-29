@@ -233,7 +233,7 @@ async function applyLogic(data, variables) {
     // This allows us to break single line scetch conditionals and operate on them as if they were multiline.
     // data = data.split("\n");
     data = data.split("[[").map((e, i, a) => i === 0 ? e : "[[" + e);
-    let buffer = []; // the buffer is used to store manipulated lines (ie, opening loop lines). this means we can loop back to them once they've been processed without re-processing the loop itself
+    // let buffer = []; // the buffer is used to store manipulated lines (ie, opening loop lines). this means we can loop back to them once they've been processed without re-processing the loop itself
 
     let schema = (type, line, meta, vars) => {
         return {
@@ -241,7 +241,8 @@ async function applyLogic(data, variables) {
             "line": line || 0, // the line of the start (not reqd always)
             "meta": meta || {}, // any additional info for this type (not reqd always)
             "vars": vars || {},
-            "output": true
+            "output": true,
+            "buffer": []
         };
     };
 
@@ -266,7 +267,7 @@ async function applyLogic(data, variables) {
     // TODO: Read a buffer instead of per line -- this'll allow one-liners -- FIXED?
     // More appropriate names would be chunkNo, and chunk instead of lines
     for(let lineNo = 0; lineNo < data.length; lineNo++) {
-        let line = buffer[lineNo] || data[lineNo];
+        let line = depth.last()?.buffer[lineNo] ?? data[lineNo];
 
         if(depth.length > 0 && line.includes(endConditionalString)) {
             // if relooping, continue so we don't end the block
@@ -357,7 +358,7 @@ async function applyLogic(data, variables) {
             depth.push(schema("for", lineNo, d, v));
             depth.last().output = out;
             line = line.substring(matchBoxes[0][0].length);
-            buffer[lineNo] = line;
+            depth.last().buffer[lineNo] = line;
         }
 
         // For each OBJECT
@@ -377,7 +378,7 @@ async function applyLogic(data, variables) {
             depth.push(schema("each", lineNo, d, v));
             depth.last().output = out;
             line = line.substring(matchBoxes[0][0].length);
-            buffer[lineNo] = line;
+            depth.last().buffer[lineNo] = line;
         }
 
         // While Loop
@@ -394,7 +395,7 @@ async function applyLogic(data, variables) {
             // let safeEval = depth.last().condition.runInContext(depth.last().meta.context);
             depth.last().meta.looping = depth.last().output = safeEval && out;
             line = line.substring(matchBoxes[0][0].length);
-            buffer[lineNo] = line;
+            depth.last().buffer[lineNo] = line;
         }
 
         if(depth.length == 0 || depth.last().output) {
