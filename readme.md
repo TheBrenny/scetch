@@ -107,7 +107,7 @@ const scetch = require("scetch")({
 
 ### Variables
 
-- Usage: `[[ variableName ]]` ~~or `[[ object.value ]]`~~ TODO
+- Usage: `[[ variableName ]]` or `[[ object.value ]]`
 - Regex: `/\[\[[^=]*? *([^\[\]\s]+?) *\]\]/gi`
 
 Variables are inserted within the scetch engine by swapping the placeholder with the variable passed from the express route. What you'll notice is that you can also use dot notation for objects! Depth for dot notation is relatively shallow, and it's probably best that you stray from it when using loops - this is what caused my hair to fall out last night! Otherwise, I guess it works well -- I haven't really tested it too hard... ~~This allows for extra complexity which you might not get from another templating engine!~~
@@ -122,30 +122,29 @@ Partials are synonymous with includes (yeah, just like PHP includes... almost...
 ### Conditionals
 
 - Usage:
-  - If: `[[?= "js eval expression" != null ]]`
-  - Else If: `[[3= "another expression" == null ]]`
+  - If: `[[?= "js eval expression" ]]`
+  - Else If: `[[3= "another js eval expression" ]]`
   - Else: `[[3= ]]` (else if with no expression)
-  - ~~Else: `[[!= else ]]`~~
   - End If: `[[?==]]`
 - Regexes:
   - If: `/\[\[\?= *([^\s=].*?) *\]\]/gi`
   - Else (If): `/\[\[3= *(.*?) *\]\]/gi`
-  - End If: `/\[\[\?==\]\]/gi`
+  - End If: `"[[?==]]"` (straight up string matching)
 
 Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to!
 
 ### Loops
 
 - Usage:
-  - For: `[[f= counter 0:10 ]]` or `[[f= number 0:2:10 ]]` (step 2 each time)
+  - For: `[[f= counter 0:10 ]]` or `[[f= number 0:2:10 ]]` (step 2 each time) (excludes upper boundary)
   - For Each: `[[e= newVar in array ]]` (newVar is a variable, not an index!)
-  - While: `[[w= jsBoolEvalExpression() ]]`
+  - While: `[[w= jsBoolEvalExpression() ]]` (executed on entry)
   - End Loop: `[[?==]]` (I know, it's the end if! 😮)
 - Regexes:
   - For: `/\[\[f= *(\w+?) *(\d+):(?:(\d+):)?(\d+) *\]\]/gi`
   - For Each: `/\[\[e= *(\w+) *in *(\w+) *\]\]/gi`
   - While: `/\[\[w= *(\S.*?) *\]\]/gi`
-  - End Loop: `/\[\[\?==\]\]/gi` (I know, it's the end if! 😮)
+  - End Loop: `"[[?==]]"` (I know, it's the end if! 😮)
 
 Loops allow you to duplicate certain pieces of your template so you can create multiples! The counter loop is inclusive of start, and exclusive of end, so looping from 0 to 10 will provide 0 through 9 (or 10 values).
 
@@ -156,9 +155,9 @@ What you might also notice, is that the end loop tag is identical to the end if 
 ### Components
 
 - Usage:
-  - Prepare component: `[[l= location/to/component ]]` - Places a `script` object where this tag is.
-  - Inject component on server: `[[c= location/to/component || obj=obj.variable literal="literal strings" escaped="\"escaped\" values too" ]]`
-  - Inject component on client-side: `js: scetch.insert(target, [position], scetchComponent, data)`
+  - Prepare component: `[[l= location/to/component ]]` - Places a `script` object before the closing `</body>` tag.
+  - Inject component server-side: `[[c= location/to/component || obj=obj.variable literal="literal strings" escaped="\"escaped\" values too" ]]`
+  - Inject component client-side: `js: scetch.insert(target, [position], scetchComponent, data)`
 - Regexes:
   - Prepare: `\[\[l= *(.+?) *\]\]`
   - Injection:
@@ -168,9 +167,13 @@ What you might also notice, is that the end loop tag is identical to the end if 
 
 Components in scetch allow you to render partials both statically and dynamically! You can render the partial before sending data to the client by using `c=`, allowing you to, for example, add multiple rows of todos! Then if the client wants a new todo, the global scetch object can insert one on your command! By calling `scetch.insert($(".todos"), "beforeend", scetch.comps.todo)`, you can add a new todo component before the closing tag of the todo list!
 
-Nonce use is available to help secure your web apps! One package (also written by TheBrenny) that can help become a middleware to ExpressJS is [`nonce-express`](https://github.com/TheBrenny/nonce-express).
+The `scetch.comps` object literally holds the string data of the scetch components. Therefore you can add partials that you don't even load! Simply swap out the scetch component you want to use for valid HTML and, scetch's your engine, it's in!
 
-Alternatively, nonces can be set by setting a variable during `res.render` or `scetch.engine`.
+The only limitation to using the client-side injection is that you only have access to applying variables. You don't get loops, you don't get conditions, you don't get nothin' but variables.
+
+Your web app doesn't allow inline scripts? No worries! Nonce use is available to help secure your web apps! One package (also written by TheBrenny) that can help become a middleware to ExpressJS is [`nonce-express`](https://github.com/TheBrenny/nonce-express).
+
+Alternatively, nonces can be set by setting a variable during in the object passed to `res.render` or `scetch.engine`.
 
 *See also! `scetch.insert` is more-or-less a wrapper for [`insertAdjacentHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML). Go there to understand the arguments!*
 
@@ -178,14 +181,30 @@ Alternatively, nonces can be set by setting a variable during `res.render` or `s
 
 scetch's processing flow isn't fully matured yet, and is subject to change at any time. This may break your environment, so be careful when it comes to updating scetch! Here's the current flow:
 
-`Partials  ->  Component Load Scripts  ->  Component Injections  ->  Variables  ->  If/Else (NOT YET!)  ->  Numerical Loops  ->  Elemental Loops  ->  While Loops`
+- `engine(filepath, variables, cb)`
+  - Read data in `filepath`
+  - "Process Data"
+    - Apply Partials
+    - Apply Component Injections
+    - Apply Variables
+    - Apply Logic (recursively calls "Process Data" for some things)
+  - Apply Variables (as a safety measure)
+  - Apply Component Load Scripts
+  - Return the processed data!
 
 A cool idea would be to make this processing flow more modular, and let you users take control of it, but we'll see what happens... I gotta give scetch a real canvas first!
 
 ## Contributing
+
 Pull requests are warmly welcomed. For major changes, please open an issue first to discuss what you would like to change.
 
 ~~Please make sure to update tests as appropriate.~~ Yeah.... We'll get to testing one day... Maybe you could sort it out? 🙏
+
+## Final Words
+
+This is literally just a passion project for no other reason than to build and maintain a project that I can use in my life! I've used it in a number of projects already, and plan to continue using it for more!
+
+If you feel like adopting scetch, please be aware of the risks associated with a library that's just for fun!
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
