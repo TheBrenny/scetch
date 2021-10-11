@@ -5,12 +5,16 @@ module.exports = (function () {
         };
     }
 
-    function getDeepObjectByString(obj, str) {
-        let parts = str.split(".").reverse();
+    function recurseGetVariable(varName, variables) {
+        let dotNot = typeof varName === "string" ? varName.split('.') : Array.isArray(varName) ? varName : undefined;
+        if(dotNot === undefined) return undefined;
 
-        while (obj != null && parts.length > 0) obj = obj[parts.pop()];
-
-        return obj;
+        let variable = variables;
+        for(let d of dotNot) {
+            if(typeof variable === "undefined") break;
+            variable = variable[d];
+        }
+        return variable;
     }
 
     globalThis.scetch = globalThis.scetch || {};
@@ -38,7 +42,7 @@ module.exports = (function () {
                 matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
                 for (let box of matchBoxes) {
-                    let variable = getDeepObjectByString(data, box[1]);
+                    let variable = recurseGetVariable(box[1], data);
                     if (variable !== undefined) component = component.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
                 }
             }

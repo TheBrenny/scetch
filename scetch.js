@@ -59,6 +59,18 @@ function runInNewContext(script, context) {
     return false;
 }
 
+function recurseGetVariable(varName, variables) {
+    let dotNot = typeof varName === "string" ? varName.split('.') : Array.isArray(varName) ? varName : undefined;
+    if(dotNot === undefined) return undefined;
+
+    let variable = variables;
+    for(let d of dotNot) {
+        if(typeof variable === "undefined") break;
+        variable = variable[d];
+    }
+    return variable;
+}
+
 function engine(filePath, variables, callback) {
     if(!path.isAbsolute(filePath)) filePath = path.join(scetchOptions.root, filePath);
     if(!filePath.endsWith('.sce')) filePath += '.sce';
@@ -133,15 +145,8 @@ async function applyVariables(data, variables) {
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i); // TODO: Fix this filter
 
     for(let box of matchBoxes) {
-        let dotNot = box[1].split('.');
-
-        let variable = variables;
-        for(let d of dotNot) {
-            if(typeof variable === "undefined") break;
-            variable = variable[d];
-        }
-
-        // TODO: Stringify 'variable' appropriately.
+        let variable = recurseGetVariable(box[1], variables);
+        // TODO: Stringify 'variable' correctly.
         if(variable !== undefined) data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), variable);
     }
 
