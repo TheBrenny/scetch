@@ -110,7 +110,9 @@ const scetch = require("scetch")({
 - Usage: `[[ variableName ]]` or `[[ object.value ]]`
 - Regex: `/\[\[[^=]*? *([^\[\]\s]+?) *\]\]/gi`
 
-Variables are inserted within the scetch engine by swapping the placeholder with the variable passed from the express route. What you'll notice is that you can also use dot notation for objects! Depth for dot notation is relatively shallow, and it's probably best that you stray from it when using loops - this is what caused my hair to fall out last night! Otherwise, I guess it works well -- I haven't really tested it too hard... ~~This allows for extra complexity which you might not get from another templating engine!~~
+Variables are inserted within the scetch engine by swapping the placeholder with the variable passed from the express route. What you'll notice is that you can also use dot notation for objects! Depth for dot notation is relatively shallow, and it's probably best that you stray from it when using loops - this is what caused my hair to fall out last night! Otherwise, I guess it works well -- I haven't really tested it too hard... ~~This allows for extra complexity which you might not get from another templating engine!~~ <== That is completely a guess and has no evidence.
+
+To access elements of an array through this tag, you can use dot notation as well! This makes things like `[[ array.0.id ]]` possible!
 
 ### Partials
 
@@ -142,7 +144,7 @@ Conditionals provide you with a way to control the flow of your rendered views. 
   - End Loop: `[[?==]]` (I know, it's the end if! 😮)
 - Regexes:
   - For: `/\[\[f= *(\w+?) *(\d+):(?:(\d+):)?(\d+) *\]\]/gi`
-  - For Each: `/\[\[e= *(\w+) *in *(\w+) *\]\]/gi`
+  - For Each: `/\[\[e= *(\w+) *in *(\S+) *\]\]/gi`
   - While: `/\[\[w= *(\S.*?) *\]\]/gi`
   - End Loop: `"[[?==]]"` (I know, it's the end if! 😮)
 

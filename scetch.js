@@ -188,9 +188,10 @@ async function applyComponentLoadScripts(data, variables) {
 }
 
 // TODO: dot ops don't work inside components if you don't name it the exact same as inside the component.
+// TODO: Maybe use recurseGetVariable?
 // [[c= component || comp=c ]]
 // [[ comp.hello ]] <-- This won't work
-// [[ [[c]].hello ]] <-- This might (should?) work
+// [[ [[c]].hello ]] <-- This won't work either
 async function applyComponentInjections(data, variables) {
     const rx = /\[\[c= *([^ ]+?)(?: *\|\| *(.+?))? *\]\]/gi;
     const rxV = /(\w+)=("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+)/gi;
@@ -231,7 +232,7 @@ async function applyLogic(data, variables) {
     const ifOpen = /\[\[\?= *([^\s=].*?) *\]\]/gi;
     const elseIf = /\[\[3= *(.*?) *\]\]/gi;
     const numberLoop = /\[\[f= *(\w+?) *(\d+):(?:(\d+):)?(\d+) *\]\]/gi;
-    const eachLoop = /\[\[e= *(\w+) *in *(\w+) *\]\]/gi;
+    const eachLoop = /\[\[e= *(\w+) *in *(\S+) *\]\]/gi;
     const whileLoop = /\[\[w= *(\S.*?) *\]\]/gi;
 
     // instead of splitting on each line, we split on what *COULD BE* a closing scetch tag.
@@ -252,7 +253,7 @@ async function applyLogic(data, variables) {
     };
 
     // TODO: Another output fix would be depth.output where it'll traverse the
-    //       stack finding an "output=flase" and thensaying no to output if
+    //       stack finding an "output=flase" and then saying no to output if
     //       that's the case.
     let depth = [];
     depth.last = () => depth[depth.length - 1];
@@ -373,7 +374,7 @@ async function applyLogic(data, variables) {
             let d = {
                 varName: matchBoxes[0][1],
                 idx: 0,
-                collection: variables[matchBoxes[0][2]],
+                collection: recurseGetVariable(matchBoxes[0][2], variables),
             };
             d.length = (d.collection || []).length;
             if(d.length === 0) out = false;
