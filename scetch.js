@@ -374,7 +374,7 @@ async function applyLogic(data, variables) {
             let d = {
                 varName: matchBoxes[0][1],
                 idx: 0,
-                collection: recurseGetVariable(matchBoxes[0][2], variables),
+                collection: recurseGetVariable(matchBoxes[0][2], allVars()),
             };
             d.length = (d.collection || []).length;
             if(d.length === 0) out = false;
