@@ -10,7 +10,8 @@ const scetchInjectScript = require("./util/scetchInjectScript");
 let scetchDefaults = {
     root: path.join(__dirname, 'views'),
     ext: ".sce",
-    nonceName: "nonce"
+    nonceName: "nonce",
+    alwaysScetchInject: false,
 };
 let scetchOptions = {};
 
@@ -156,7 +157,7 @@ async function applyVariables(data, variables) {
 async function applyComponentLoadScripts(data, variables) {
     const rx = /\[\[l= *(.+?) *\]\]/gi;
     let matchBoxes = [...data.matchAll(rx)];
-    if(!matchBoxes || !matchBoxes.length) return data;
+    if((!matchBoxes || !matchBoxes.length) && !scetchOptions.alwaysScetchInject) return data;
     matchBoxes = matchBoxes.filter((v, i, s) => s.indexOf(v) === i);
 
     let root = scetchOptions.root;
