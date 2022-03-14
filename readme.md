@@ -199,7 +199,7 @@ As an example, setting up a the following binding would allow you to modify the 
     document.querySelector("#buttonCounter").addEventListener("click", () => {
         let num = parseInt(scetch.get("counter"));
         if(isNaN(num)) num = 0;
-        globalThis.scetch.set("counter", num + 1)
+        scetch.set("counter", num + 1)
     });
 </script>
 ```

@@ -4,6 +4,6 @@
     document.querySelector("#buttonCounter").addEventListener("click", () => {
         let num = parseInt(scetch.get("counter"));
         if(isNaN(num)) num = 0;
-        globalThis.scetch.set("counter", num + 1)
+        scetch.set("counter", num + 1)
     });
 </script>

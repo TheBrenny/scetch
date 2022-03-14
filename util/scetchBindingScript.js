@@ -14,6 +14,8 @@ module.exports = (function () {
 
             if(att.startsWith("!")) els.forEach(el => el[att.substring(1)] = value);
             else els.forEach(el => el.setAttribute(att, value));
+
+            return value;
         });
         globalThis.scetch.bind = globalThis.scetch.bind ?? ((varName, element, attribute, defaultVal) => {
             bindings[varName] = {
