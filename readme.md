@@ -125,16 +125,16 @@ Partials are synonymous with includes (yeah, just like PHP includes... almost...
 ### Conditionals
 
 - Usage:
-  - If: `[[?= "js eval expression" ]]`
-  - Else If: `[[3= "another js eval expression" ]]`
+  - If: `[[?= js.eval.expression ]]`
+  - Else If: `[[3= another.js.eval.expression ]]`
   - Else: `[[3= ]]` (else if with no expression)
   - End If: `[[?==]]`
 - Regexes:
   - If: `/\[\[\?= *([^\s=].*?) *\]\]/gi`
   - Else (If): `/\[\[3= *(.*?) *\]\]/gi`
   - End If: `"[[?==]]"` (straight up string matching)
-
-Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to! This expression can also be in the form of variables passed to the scetch engine, too!
+****
+Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to! These expressions are run in a separate context in order to avoid any security vulnerabilities coming from the use of potentially untrusted evals.
 
 ### Loops
 
@@ -164,7 +164,7 @@ TODO: It would be excellent to be able to loop numbers between variables: `[[f= 
   - Inject component server-side: `[[c= location/to/component || obj=obj.variable literal="literal strings" escaped="\"escaped\" values too" ]]`
   - Inject component client-side: `js: scetch.insert(target, [position], scetchComponent, data)`
 - Regexes:
-  - Prepare: `\[\[l= *(.+?) *\]\]`
+  - Prepare: `/\[\[l= *(.+?) *\]\]/gi`
   - Injection:
     - Whole Capture: `/\[\[c= *([^ ]+?)(?: *\|\| *(.+?))? *\]\]/gi`
     - Variables Capture: `/(\w+)=("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+)/gi`
@@ -181,7 +181,8 @@ The only limitation to using the client-side injection is that you only have acc
 ### Data Bindings
 
 - Usage: `[[b= bindingName "#targetElementsQuery" "target element attribute" "optional default" ]]`
-- Regex: `TODO: Write regex`
+- Regex: `/\[\[b= *(\w+?) +("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+) +("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+) +("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+)? *\]\]/gi`
+  - RegExr: https://regexr.com/6hbkb
 
 Binding allows you to set up global variables which automatically update the DOM on `set`. It works by registering variables in the global `scetch.bindings` with getters and setters. These variables can also be accessed and modified through the `scetch.get(variable)` and `scetch.set(variable, value)` functions.
 
