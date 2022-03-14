@@ -17,7 +17,7 @@ module.exports = (function () {
         return variable;
     }
 
-    globalThis.scetch = globalThis.scetch || {};
+    globalThis.scetch = globalThis.scetch ?? {};
 
     globalThis.scetch.insert = function (target, position, component, data) {
         let pos = ["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"];
