@@ -194,9 +194,13 @@ As an example, setting up a the following binding would allow you to modify the 
 
 ```html
 <button id="buttonCounter"></button>
-[[b= counter "#buttonCounter" "!innerText" "Click Me" ]]
+[[b= counter "#buttonCounter" "!innerText" "Click Me!" ]]
 <script>
-document.querySelector("#buttonCount").addEventListener("click", () => scetch.set("counter", scetch.get("counter") + 1));
+    document.querySelector("#buttonCounter").addEventListener("click", () => {
+        let num = parseInt(scetch.get("counter"));
+        if(isNaN(num)) num = 0;
+        globalThis.scetch.set("counter", num + 1)
+    });
 </script>
 ```
 
@@ -218,6 +222,7 @@ scetch's processing flow isn't fully matured yet, and is subject to change at an
     - Apply Variables
     - Apply Logic (recursively calls `processData` for some things)
   - Apply Variables (as a safety measure)
+  - Apply Data Bindings
   - Apply Component Load Scripts
   - Return the processed data!
 
