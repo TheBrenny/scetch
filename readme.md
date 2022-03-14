@@ -88,6 +88,7 @@ scetch offers a variety of handlebar-like expressions to make your templates eas
 - [Conditionals](#conditionals)
 - [Loops](#loops)
 - [Components](#components)
+- [Data Bindings](#data-bindings)
 
 These expressions are found using Regular Expressions, therefore, scetch is pretty flexible about what you can put in - it even doesn't care for spaces, so add as many as you want!
 
@@ -133,7 +134,7 @@ Partials are synonymous with includes (yeah, just like PHP includes... almost...
   - Else (If): `/\[\[3= *(.*?) *\]\]/gi`
   - End If: `"[[?==]]"` (straight up string matching)
 
-Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to!
+Conditionals provide you with a way to control the flow of your rendered views. You can show or hide content *on the server side* to make sure the end user does (not) see what they're (not) supposed to! This expression can also be in the form of variables passed to the scetch engine, too!
 
 ### Loops
 
@@ -154,10 +155,12 @@ Also, if you want to use the number counter to reference an array element from a
 
 What you might also notice, is that the end loop tag is identical to the end if - this is intentional, because the last open if/for/while will be closed using the end loop/if!
 
+TODO: It would be excellent to be able to loop numbers between variables: `[[f= counter start:finish ]]`
+
 ### Components
 
 - Usage:
-  - Prepare component: `[[l= location/to/component ]]` - Places a `script` object before the closing `</body>` tag.
+  - Prepare component: `[[l= location/to/component ]]` - Places a `<script>` tag before the closing `</body>` tag.
   - Inject component server-side: `[[c= location/to/component || obj=obj.variable literal="literal strings" escaped="\"escaped\" values too" ]]`
   - Inject component client-side: `js: scetch.insert(target, [position], scetchComponent, data)`
 - Regexes:
@@ -173,11 +176,34 @@ The `scetch.comps` object literally holds the string data of the scetch componen
 
 The only limitation to using the client-side injection is that you only have access to applying variables. You don't get loops, you don't get conditions, you don't get nothin' but variables.
 
+*See also! `scetch.insert` is more-or-less a wrapper for [`insertAdjacentHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML). Go there to understand the arguments!*
+
+### Data Bindings
+
+- Usage: `[[b= bindingName "#targetElementsQuery" "target element attribute" "optional default" ]]`
+- Regex: `TODO: Write regex`
+
+Binding allows you to set up global variables which automatically update the DOM on `set`. It works by registering variables in the global `scetch.bindings` with getters and setters. These variables can also be accessed and modified through the `scetch.get(variable)` and `scetch.set(variable, value)` functions.
+
+Additionally if the `"target element attribute"`  begins with an exclamation mark (`!`) then the target is not assumed to be an attribute, but rather a `.property` of the DOM element (ie, `innerText`, `innerHTML`, `hidden`, etc).
+
+Also, the great thing about scetch is that it will allow you to use variables instead of literal strings as arguments, so a default value could be passed to the engine as a variable set by the server.
+
+As an example, setting up a the following binding would allow you to modify the `innerText` of a button to reflect how many times it's been pressed:
+
+```html
+<button id="buttonCounter"></button>
+[[b= counter "#buttonCounter" "!innerText" "Click Me" ]]
+<script>
+document.querySelector("#buttonCount").addEventListener("click", () => scetch.set("counter", scetch.get("counter") + 1));
+</script>
+```
+
+## Nonce Usage
+
 Your web app doesn't allow inline scripts? No worries! Nonce use is available to help secure your web apps! One package (also written by TheBrenny) that can help become a middleware to ExpressJS is [`nonce-express`](https://github.com/TheBrenny/nonce-express).
 
-Alternatively, nonces can be set by setting a variable during in the object passed to `res.render` or `scetch.engine`.
-
-*See also! `scetch.insert` is more-or-less a wrapper for [`insertAdjacentHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/insertAdjacentHTML). Go there to understand the arguments!*
+Alternatively, nonces (or any value, really) can be set by setting a variable in the variables object passed to `res.render` or `scetch.engine`.
 
 ## scetch to *Mona Lisa*
 
@@ -185,11 +211,11 @@ scetch's processing flow isn't fully matured yet, and is subject to change at an
 
 - `engine(filepath, variables, cb)`
   - Read data in `filepath`
-  - "Process Data"
+  - `processData(data, variables, noLogic)`
     - Apply Partials
     - Apply Component Injections
     - Apply Variables
-    - Apply Logic (recursively calls "Process Data" for some things)
+    - Apply Logic (recursively calls `processData` for some things)
   - Apply Variables (as a safety measure)
   - Apply Component Load Scripts
   - Return the processed data!
@@ -202,6 +228,9 @@ Pull requests are warmly welcomed. For major changes, please open an issue first
 
 ~~Please make sure to update tests as appropriate.~~ Yeah.... We'll get to testing one day... Maybe you could sort it out? 🙏
 
+TODO: We could use cypress? 😏
+TODO: We should also have a demo!!
+
 ## Final Words
 
 This is literally just a passion project for no other reason than to build and maintain a project that I can use in my life! I've used it in a number of projects already, and plan to continue using it for more!
@@ -209,4 +238,5 @@ This is literally just a passion project for no other reason than to build and m
 If you feel like adopting scetch, please be aware of the risks associated with a library that's just for fun!
 
 ## License
+
 [MIT](https://choosealicense.com/licenses/mit/)
