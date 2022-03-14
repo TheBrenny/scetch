@@ -19,7 +19,7 @@ module.exports = (function () {
 
     globalThis.scetch = globalThis.scetch || {};
 
-    globalThis.scetchInsert = function (target, position, component, data) {
+    globalThis.scetch.insert = function (target, position, component, data) {
         let pos = ["beforeBegin", "afterBegin", "beforeEnd", "afterEnd"];
 
         if (typeof component === 'undefined') {
@@ -52,5 +52,9 @@ module.exports = (function () {
 
         target.insertAdjacentElement(position, component);
         return component;
+    };
+    globalThis.scetchInsert = function() {
+        console.warn("scetchInsert is deprecated, use scetch.insert instead");
+        return globalThis.scetch.insert.apply(this, arguments);
     };
 }).toString();
