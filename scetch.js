@@ -5,7 +5,9 @@ const vm = require('vm'); // change this to vm2!!
 const path = require('path');
 const fs = require('fs').promises;
 
+// TODO: Turn this into a fs.promises.readFile and .then/await the result
 const scetchInjectScript = require("./util/scetchInjectScript");
+const scetchBindingScript = require("./util/scetchBindingScript");
 
 let scetchDefaults = {
     root: path.join(__dirname, 'views'),
@@ -80,6 +82,7 @@ function engine(filePath, variables, callback) {
         .then(data => data.toString())
         .then(data => processData.call(this, data, variables))
         .then(data => applyVariables.call(this, data, variables))
+        .then(data => applyDataBindings.call(this, data, variables))
         .then(data => applyComponentLoadScripts.call(this, data, variables))
         .then(data => {
             if(!callback) return data;
@@ -163,7 +166,7 @@ async function applyComponentLoadScripts(data, variables) {
     let root = scetchOptions.root;
     let ext = scetchOptions.ext;
 
-    let script = `<script nonce="${variables[scetchOptions.nonceName]}">(${scetchInjectScript})();;(()=>{`;
+    let script = `<script nonce="${variables[scetchOptions.nonceName]}">(${scetchInjectScript})();(()=>{`;
 
     for(let box of matchBoxes) {
         try {
@@ -209,7 +212,7 @@ async function applyComponentInjections(data, variables) {
         let options = {};
 
         for(let opt of matches) {
-            if(opt[1].startsWith("\"")) opt[1] = opt[1].substring(1, opt[1].length - 1).replace(/\\"/gi, "\"");
+            if(opt[1].startsWith(`"`)) opt[1] = opt[1].substring(1, opt[1].length - 1).replace(/\\"/gi, "\"");
             else opt[1] = variables[opt[1]] || `[[ ${opt[1]} ]]`;
             options[opt[0]] = opt[1];
         }
@@ -222,6 +225,45 @@ async function applyComponentInjections(data, variables) {
             continue;
         }
     }
+
+    return data;
+}
+
+async function applyDataBindings(data, variables) {
+    const rx = /\[\[b= *(\w+?) +("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+) +("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+) +("[^"\\]*(?:\\.[^"\\]*)*"|(?:\w+\.*)+)? *\]\]/gi;
+    let matchBoxes = [...data.matchAll(rx)];
+    if(!matchBoxes || !matchBoxes.length) return data;
+
+    let script = `<script nonce="${variables[scetchOptions.nonceName]}">(${scetchBindingScript})();(()=>{`;
+
+    for(let box of matchBoxes) {
+        try {
+            let varName = box[1]; // the variable name
+            let element = box[2]; // the element to target
+            let attribute = box[3]; // the attribute to bind to
+            let defaultValue = box[4] ?? undefined; // the defaut value to bind (optional)
+
+            if(element.startsWith(`"`)) element = element.substring(1, element.length - 1).replace(/\\"/gi, "\"");
+            else element = variables[element];
+            if(attribute.startsWith(`"`)) attribute = attribute.substring(1, attribute.length - 1).replace(/\\"/gi, "\"");
+            else attribute = variables[attribute];
+            if(!!defaultValue) {
+                if(defaultValue.startsWith(`"`)) defaultValue = defaultValue.substring(1, defaultValue.length - 1).replace(/\\"/gi, "\"");
+                else defaultValue = variables[defaultValue];
+            }
+
+            script += `scetch.bind("${varName}", "${element}", "${attribute}", ${JSON.stringify(defaultValue)});\n`;
+
+            data = data.replace(new RegExp(RegExp.escape(box[0]), "g"), ""); // remove all binding references for this one
+        } catch(e) {
+            console.error(e);
+            continue;
+        }
+    }
+    script += `})();</script>`;
+
+    let insert = data.indexOf("</body>");
+    data = data.substr(0, insert) + script + data.substr(insert);
 
     return data;
 }
